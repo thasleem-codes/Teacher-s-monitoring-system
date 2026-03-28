@@ -13,11 +13,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Teachers Monitoring System",
-  description:
-    "A simple and efficient system to monitor teachers' daily activities and performance.",
-  icons: {
-    icon: "../public/kite.png",
+  title: {
+    default: "KRHS Portal | Faculty Evaluation Engine",
+    template: "%s | KRHS Portal"
+  },
+  description: "Automated daily logging and evaluation system for KRHS International educators.",
+  keywords: ["education", "school management", "daily logging", "teacher evaluation", "KRHS"],
+  authors: [{ name: "Code Craft" }],
+  
+  // Open Graph controls how your link looks when shared on WhatsApp, Facebook, or LinkedIn
+  openGraph: {
+    title: "KRHS Faculty Portal",
+    description: "Submit your daily classroom updates and track student engagement.",
+    url: "https://teacher-s-monitoring-system.vercel.app/",
+    siteName: "KRHS Portal",
+    images: [
+      {
+        url: "/kite.png", // This image will appear in the WhatsApp link preview
+        width: 800,
+        height: 600,
+        alt: "KRHS Portal Logo",
+      },
+    ],
+    locale: "en_IN",
+    type: "website",
+  },
+  
+  // Instructs Google's web crawlers to index the site
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
