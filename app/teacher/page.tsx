@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 // Fixed the import name here to 'initialQuestions'
@@ -133,10 +134,12 @@ export default function TeacherPortal() {
 
         <header className="w-full max-w-2xl mx-auto flex items-center justify-between py-4 border-b border-slate-900/80 z-10">
           <div className="flex items-center gap-2.5">
-            <img
+            <Image
               src="/kite.png"
               alt="KRHS Logo"
-              className="w-7 h-7 object-contain"
+              width={28}
+              height={28}
+              className="object-contain"
             />
             <span className="font-bold text-sm tracking-tight text-white">
               KRHS<span className="text-emerald-400"> PORTAL</span>

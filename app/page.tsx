@@ -1,9 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white overflow-hidden selection:bg-emerald-600 selection:text-white">
-      
       {/* 1. SUBTLE ARCHITECTURAL GRID BACKGROUND */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
 
@@ -14,14 +14,15 @@ export default function Home() {
       {/* 2. TOP NAVIGATION BAR */}
       <header className="w-full border-b border-slate-900/80 backdrop-blur-md bg-slate-950/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
-          
           {/* Logo / Brand Name */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-black text-lg shadow-md shadow-emerald-500/20 hover:scale-105 transition-transform duration-300">
-              <img 
-                src="/kite.png" 
-                alt="KRHS International logo mark in green and teal gradient representing a modern school brand" 
-                className="w-full h-full object-contain" 
+              <Image
+                src="/kite.png"
+                alt="KRHS International Logo"
+                width={32}
+                height={32}
+                className="object-contain"
               />
             </div>
             <span className="font-bold text-base sm:text-lg tracking-tight text-white">
@@ -31,9 +32,15 @@ export default function Home() {
 
           {/* Center Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <span className="text-white hover:text-emerald-400 transition-colors cursor-pointer">Daily Logging</span>
-            <span className="hover:text-emerald-400 transition-colors cursor-pointer">Evaluation Criteria</span>
-            <span className="hover:text-emerald-400 transition-colors cursor-pointer">Best Teacher Awards</span>
+            <span className="text-white hover:text-emerald-400 transition-colors cursor-pointer">
+              Daily Logging
+            </span>
+            <span className="hover:text-emerald-400 transition-colors cursor-pointer">
+              Evaluation Criteria
+            </span>
+            <span className="hover:text-emerald-400 transition-colors cursor-pointer">
+              Best Teacher Awards
+            </span>
           </nav>
 
           {/* ADMIN LOGIN LINK */}
@@ -48,10 +55,8 @@ export default function Home() {
 
       {/* 3. MAIN HERO SECTION */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 md:py-20 my-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center z-10">
-        
         {/* Left Column: Animated Entry Typography & CTA */}
         <div className="lg:col-span-7 text-left animate-[fadeInUp_0.8s_ease-out_forwards]">
-          
           {/* Badge with animated radar ping dot */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4 sm:mb-6 shadow-sm">
             <span className="relative flex h-2 w-2">
@@ -69,7 +74,8 @@ export default function Home() {
           </h1>
 
           <p className="text-sm sm:text-base md:text-lg text-slate-400 max-w-xl mb-6 sm:mb-8 leading-relaxed">
-            Submit your daily classroom updates, track student engagement educating the next generation.
+            Submit your daily classroom updates, track student engagement
+            educating the next generation.
           </p>
 
           {/* PRIMARY CALL TO ACTION with interactive hover glow */}
@@ -79,7 +85,9 @@ export default function Home() {
               className="group relative inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl transition-all duration-300 shadow-xl shadow-emerald-600/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-sm sm:text-base"
             >
               <span>Enter Teacher Portal</span>
-              <span className="ml-3 group-hover:translate-x-1.5 transition-transform duration-300">→</span>
+              <span className="ml-3 group-hover:translate-x-1.5 transition-transform duration-300">
+                →
+              </span>
             </Link>
           </div>
         </div>
@@ -87,7 +95,6 @@ export default function Home() {
         {/* Right Column: Floating Visual UI Cards */}
         <div className="lg:col-span-5 relative hidden sm:block">
           <div className="relative mx-auto max-w-md h-[420px] flex items-center justify-center">
-            
             {/* Background Decorative Glow behind cards */}
             <div className="absolute inset-0 bg-gradient-to-tr from-emerald-600/20 to-teal-600/20 rounded-3xl blur-2xl -z-10" />
 
@@ -153,21 +160,27 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
 
       {/* 4. FOOTER WITH CUSTOM BRANDING */}
       <footer className="w-full border-t border-slate-900/80 py-3 sm:py-5 px-4 text-center text-xs text-slate-500 z-10">
-        <p>EduMonitor System • Designed for quick & seamless daily activity logging.</p>
+        <p>
+          EduMonitor System • Designed for quick & seamless daily activity
+          logging.
+        </p>
         <p className="mt-1 text-slate-400 font-medium tracking-wide">
-          Powered by <span className="text-emerald-400 font-semibold">Code Craft</span> | 6282811230
+          Powered by{" "}
+          <span className="text-emerald-400 font-semibold">Code Craft</span> |
+          6282811230
         </p>
       </footer>
 
       {/* 5. INJECTED CUSTOM ANIMATION KEYFRAMES */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
@@ -176,8 +189,9 @@ export default function Home() {
           from { opacity: 0; transform: translateY(24px); }
           to { opacity: 1; transform: translateY(0); }
         }
-      `}} />
-
+      `,
+        }}
+      />
     </main>
   );
 }

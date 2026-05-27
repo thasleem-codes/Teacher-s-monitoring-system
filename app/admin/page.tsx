@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -416,10 +417,12 @@ export default function AdminDashboard() {
 
         <header className="w-full max-w-md mx-auto flex items-center justify-between py-4 border-b border-slate-900 z-10">
           <div className="flex items-center gap-2.5">
-            <img
+            <Image
               src="/kite.png"
               alt="KRHS Logo"
-              className="w-7 h-7 object-contain"
+              width={28}
+              height={28}
+              className="object-contain"
             />
             <span className="font-bold text-sm tracking-tight">
               KRHS<span className="text-emerald-400"> ADMIN</span>
@@ -503,7 +506,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <footer className="w-full text-center py-4 text-xs text-slate-500">
-          Designed by{" "}
+          Powred by{" "}
           <span className="text-emerald-400 font-semibold">Code Craft</span> |
           6282811230
         </footer>
@@ -1002,10 +1005,12 @@ export default function AdminDashboard() {
         <div className="space-y-8">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-sm shrink-0">
-              <img
+              <Image
                 src="/kite.png"
                 alt="KRHS Logo"
-                className="w-6 h-6 object-contain"
+                width={24}
+                height={24}
+                className="object-contain"
               />
             </div>
             <div>
@@ -1116,7 +1121,13 @@ export default function AdminDashboard() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <header className="lg:hidden w-full border-b border-slate-900 bg-slate-950/80 backdrop-blur-md p-4 sticky top-0 z-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/kite.png" alt="KRHS Logo" className="w-6 h-6" />
+            <Image
+              src="/kite.png"
+              alt="KRHS Logo"
+              width={24}
+              height={24}
+              className="object-contain"
+            />
             <span className="font-black text-sm">
               KRHS<span className="text-emerald-400"> ADMIN</span>
             </span>
@@ -1833,7 +1844,7 @@ export default function AdminDashboard() {
         <footer className="w-full text-center py-6 mt-auto text-xs text-slate-500 border-t border-slate-900/80">
           <p>EduMonitor System • HOD Evaluation Engine</p>
           <p className="mt-1 text-slate-400 font-medium tracking-wide">
-            Designed by{" "}
+            Powered by{" "}
             <span className="text-emerald-400 font-semibold">Code Craft</span> |
             6282811230
           </p>
