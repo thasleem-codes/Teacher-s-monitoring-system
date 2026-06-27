@@ -48,9 +48,9 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
                 Admin Dashboard
               </h2>
-              <p className="text-slate-400 text-sm leading-relaxed mb-6">
+              {/* <p className="text-slate-400 text-sm leading-relaxed mb-6">
                 Review submissions, track overall school analytics, and view the automated Best Teacher of the Month rankings.
-              </p>
+              </p> */}
             </div>
             <div className="flex items-center text-blue-400 font-semibold text-sm">
               <span>Access Dashboard</span>
