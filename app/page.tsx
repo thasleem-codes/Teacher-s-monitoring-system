@@ -45,9 +45,6 @@ export default function Home() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-slate-800 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
             <div>
               <span className="text-4xl mb-4 block">📊</span>
-              <div className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-slate-950 mb-2 uppercase tracking-wider">
-                Password Required
-              </div>
               <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
                 Admin Dashboard
               </h2>
