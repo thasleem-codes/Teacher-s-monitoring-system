@@ -28,7 +28,7 @@ export default function Home() {
                 Teacher Portal
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                Quick daily activity logging. Select your profile from the dropdown to view your tailored checklist—no password required.
+                Quick daily activity logging.
               </p>
             </div>
             <div className="flex items-center text-blue-600 font-semibold text-sm">
