@@ -11,6 +11,7 @@ export interface Question {
   text: string;
   type: 'boolean' | 'text';
   group: 'common' | 'class_teacher';
+  points: number;
   day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday' | 'Everyday';
 }
 
@@ -20,11 +21,20 @@ export interface DailyLogSubmission {
   teacherName: string;
   subject: string;
   department: string;
-  date: string; // Formatted display date
-  rawDate: string; // YYYY-MM-DD for checking daily duplicates!
-  status: 'Complete' | 'Pending Review';
+  date: string;
+  rawDate: string;
+  status: 'Complete' | 'Partial' | 'Overridden' | 'Rejected';
   score: number;
-  notes?: string;
+  tasksCompleted: {
+    manualSubmitted: boolean;
+    classesTaken: boolean;
+    registryUpdated: boolean;
+  };
+  // NEW: Stores exact answers submitted by the teacher!
+  answers: Record<string, string>;
+  // NEW: Admin verification tracking
+  isOverridden?: boolean;
+  adminNotes?: string;
 }
 
 export interface TeacherRanking {
@@ -34,10 +44,11 @@ export interface TeacherRanking {
   subject: string;
   department: string;
   monthlyScore: number;
+  tasksCompletedRate: number;
   streak: number;
 }
 
-// 1. Initial Teachers
+// 1. Full Faculty Directory
 export const initialTeachers: Teacher[] = [
   { id: 't1', name: 'Mohammed Thasleem', subject: 'IT / Computer Science', department: 'UP & HS', isClassTeacher: true },
   { id: 't2', name: 'Ananya Sharma', subject: 'English Language', department: 'UP & HS', isClassTeacher: false },
@@ -47,26 +58,52 @@ export const initialTeachers: Teacher[] = [
   { id: 't6', name: 'Suresh Kumar', subject: 'Malayalam', department: 'HSS', isClassTeacher: false },
 ];
 
-// 2. Question Bank
+// 2. Weighted Task Questions
 export const mockQuestions: Question[] = [
-  { id: 'q1', text: 'Did you submit the teacher manual today?', type: 'boolean', group: 'common', day: 'Monday' },
-  { id: 'q2', text: 'Did you complete all scheduled IT/Language classes today?', type: 'boolean', group: 'common', day: 'Everyday' },
-  { id: 'q3', text: 'As a Class Teacher, did you update the attendance registry?', type: 'boolean', group: 'class_teacher', day: 'Everyday' },
-  { id: 'q4', text: "Any specific challenges or remarks from today's sessions?", type: 'text', group: 'common', day: 'Everyday' }
+  { id: 'q1', text: 'Did you submit the teacher manual today?', type: 'boolean', group: 'common', points: 35, day: 'Monday' },
+  { id: 'q2', text: 'Did you complete all scheduled IT/Language classes today?', type: 'boolean', group: 'common', points: 35, day: 'Everyday' },
+  { id: 'q3', text: 'As a Class Teacher, did you update the attendance registry?', type: 'boolean', group: 'class_teacher', points: 30, day: 'Everyday' },
+  { id: 'q4', text: "Any specific challenges or remarks from today's sessions?", type: 'text', group: 'common', points: 0, day: 'Everyday' }
 ];
 
-// 3. Initial Submissions (Notice t1 and t3 have already submitted for today's date: 2026-07-12)
+// 3. Submissions with Exact Answer Histories
 export const initialSubmissions: DailyLogSubmission[] = [
-  { id: 's1', teacherId: 't1', teacherName: 'Mohammed Thasleem', subject: 'IT / Computer Science', department: 'UP & HS', date: 'Today, 3:45 PM', rawDate: '2026-07-12', status: 'Complete', score: 100, notes: 'All IT practical labs completed smoothly.' },
-  { id: 's2', teacherId: 't3', teacherName: 'Rahul Varma', subject: 'Mathematics', department: 'UP & HS', date: 'Today, 3:30 PM', rawDate: '2026-07-12', status: 'Complete', score: 95 },
-  { id: 's3', teacherId: 't5', teacherName: 'Divya Pillai', subject: 'General Science', department: 'LP', date: 'Today, 1:15 PM', rawDate: '2026-07-12', status: 'Complete', score: 100 },
+  { 
+    id: 's1', teacherId: 't1', teacherName: 'Mohammed Thasleem', subject: 'IT / Computer Science', department: 'UP & HS', 
+    date: 'Today, 3:45 PM', rawDate: '2026-07-12', status: 'Complete', score: 100, 
+    tasksCompleted: { manualSubmitted: true, classesTaken: true, registryUpdated: true },
+    answers: { q1: 'Yes', q2: 'Yes', q3: 'Yes', q4: 'All IT practical labs completed smoothly.' }
+  },
+  { 
+    id: 's2', teacherId: 't3', teacherName: 'Rahul Varma', subject: 'Mathematics', department: 'UP & HS', 
+    date: 'Today, 3:30 PM', rawDate: '2026-07-12', status: 'Partial', score: 70, 
+    tasksCompleted: { manualSubmitted: false, classesTaken: true, registryUpdated: true },
+    answers: { q1: 'No', q2: 'Yes', q3: 'Yes', q4: 'Manual will be submitted tomorrow morning.' }
+  },
+  { 
+    id: 's3', teacherId: 't5', teacherName: 'Divya Pillai', subject: 'General Science', department: 'LP', 
+    date: 'Today, 1:15 PM', rawDate: '2026-07-12', status: 'Complete', score: 100, 
+    tasksCompleted: { manualSubmitted: true, classesTaken: true, registryUpdated: true },
+    answers: { q1: 'Yes', q2: 'Yes', q3: 'Yes', q4: 'No issues today.' }
+  },
+  { 
+    id: 's4', teacherId: 't2', teacherName: 'Ananya Sharma', subject: 'English Language', department: 'UP & HS', 
+    date: 'Yesterday', rawDate: '2026-07-11', status: 'Complete', score: 100, 
+    tasksCompleted: { manualSubmitted: true, classesTaken: true, registryUpdated: true },
+    answers: { q1: 'Yes', q2: 'Yes', q4: 'Conducted group reading session.' }
+  },
+  { 
+    id: 's5', teacherId: 't4', teacherName: 'Sneha Nair', subject: 'Science', department: 'UP & HS', 
+    date: 'Yesterday', rawDate: '2026-07-11', status: 'Partial', score: 65, 
+    tasksCompleted: { manualSubmitted: true, classesTaken: false, registryUpdated: false },
+    answers: { q1: 'Yes', q2: 'No', q4: 'Special assembly took up the class period.' }
+  },
 ];
 
-// 4. Leaderboard
 export const initialLeaderboard: TeacherRanking[] = [
-  { rank: 1, teacherId: 't1', name: 'Mohammed Thasleem', subject: 'IT / Computer Science', department: 'UP & HS', monthlyScore: 98.5, streak: 14 },
-  { rank: 2, teacherId: 't3', name: 'Rahul Varma', subject: 'Mathematics', department: 'UP & HS', monthlyScore: 96.0, streak: 12 },
-  { rank: 3, teacherId: 't4', name: 'Sneha Nair', subject: 'Science', department: 'UP & HS', monthlyScore: 92.4, streak: 9 },
-  { rank: 4, teacherId: 't2', name: 'Ananya Sharma', subject: 'English Language', department: 'UP & HS', monthlyScore: 88.0, streak: 5 },
-  { rank: 1, teacherId: 't5', name: 'Divya Pillai', subject: 'General Science', department: 'LP', monthlyScore: 99.0, streak: 15 },
+  { rank: 1, teacherId: 't1', name: 'Mohammed Thasleem', subject: 'IT / Computer Science', department: 'UP & HS', monthlyScore: 98.5, tasksCompletedRate: 100, streak: 14 },
+  { rank: 2, teacherId: 't3', name: 'Rahul Varma', subject: 'Mathematics', department: 'UP & HS', monthlyScore: 91.0, tasksCompletedRate: 88, streak: 12 },
+  { rank: 3, teacherId: 't4', name: 'Sneha Nair', subject: 'Science', department: 'UP & HS', monthlyScore: 84.4, tasksCompletedRate: 79, streak: 9 },
+  { rank: 4, teacherId: 't2', name: 'Ananya Sharma', subject: 'English Language', department: 'UP & HS', monthlyScore: 82.0, tasksCompletedRate: 75, streak: 5 },
+  { rank: 1, teacherId: 't5', name: 'Divya Pillai', subject: 'General Science', department: 'LP', monthlyScore: 99.0, tasksCompletedRate: 100, streak: 15 },
 ];
