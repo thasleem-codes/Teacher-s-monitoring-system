@@ -412,7 +412,7 @@ export default function AdminDashboard() {
     return (
       <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-6 selection:bg-emerald-600">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/15 to-teal-500/15 blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-linear-to-tr from-emerald-600/15 to-teal-500/15 blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
 
         <header className="w-full max-w-md mx-auto flex items-center justify-between py-4 border-b border-slate-900 z-10">
           <div className="flex items-center gap-2.5">
@@ -1313,7 +1313,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
                           <div
-                            className="bg-gradient-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.6s_ease-out_forwards]"
+                            className="bg-linear-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.6s_ease-out_forwards]"
                             style={{
                               width: `${(taskCompletionRates.registry / taskCompletionRates.total) * 100}%`,
                             }}
