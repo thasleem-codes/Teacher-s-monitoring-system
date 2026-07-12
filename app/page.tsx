@@ -42,9 +42,6 @@ export default function Home() {
             className="group flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition duration-200 active:scale-95 shadow-sm"
           >
             <span>Admin Login</span>
-            <span className="text-emerald-400 group-hover:translate-x-1 transition-transform">
-              →
-            </span>
           </Link>
         </div>
       </header>
