@@ -1,26 +1,59 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 // Fixed the import name here to 'initialQuestions'
 import {
   initialTeachers,
   initialQuestions,
-  initialSubmissions,
   Teacher,
 } from "../data/mockData";
 
+import { getTeachers, submitDailyLog, checkTodaySubmission } from "../actions";
+
 export default function TeacherPortal() {
+  const [teachersList, setTeachersList] = useState<Teacher[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [isStarted, setIsStarted] = useState<boolean>(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
-  const currentTeacher: Teacher | undefined = initialTeachers.find(
+  // New backend states
+  const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] =
+    useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Fetch teachers from Supabase when page loads
+  useEffect(() => {
+    async function loadTeachers() {
+      const data = await getTeachers();
+      if (data.length > 0) setTeachersList(data);
+    }
+    loadTeachers();
+  }, []);
+
+  // Check database if selected teacher already submitted today
+  const todayRawDate = new Date().toISOString().split("T")[0]; // Generates YYYY-MM-DD
+
+  useEffect(() => {
+    async function verifyDailyLock() {
+      if (selectedTeacherId) {
+        const alreadySubmitted = await checkTodaySubmission(
+          selectedTeacherId,
+          todayRawDate,
+        );
+        setHasAlreadySubmittedToday(alreadySubmitted);
+      }
+    }
+    verifyDailyLock();
+  }, [selectedTeacherId, todayRawDate]);
+
+  const currentTeacher: Teacher | undefined = teachersList.find(
     (t) => t.id === selectedTeacherId,
   );
+  // ... rest of your date logic remains the same
 
   // Real-time Day & Date
   const today = new Date();
@@ -30,13 +63,6 @@ export default function TeacherPortal() {
     day: "numeric",
     year: "numeric",
   });
-  const todayRawDate = "2026-07-12";
-
-  // Check if this teacher already submitted today
-  const hasAlreadySubmittedToday = initialSubmissions.some(
-    (sub) =>
-      sub.teacherId === selectedTeacherId && sub.rawDate === todayRawDate,
-  );
 
   // Fixed the variable name here to 'initialQuestions'
   const visibleQuestions = initialQuestions.filter((q) => {
@@ -50,13 +76,13 @@ export default function TeacherPortal() {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentTeacher || isSubmitting) return;
 
-    if (!currentTeacher) return;
+    setIsSubmitting(true);
 
-    // 1. Create the new submission record
-    const newSubmission: any = {
+    const newSubmission = {
       id: `s_${Date.now()}`,
       teacherId: currentTeacher.id,
       teacherName: currentTeacher.name,
@@ -72,12 +98,19 @@ export default function TeacherPortal() {
         registryUpdated: true,
       },
       answers: answers,
+      notes: answers["q4"] || "",
     };
 
-    // 2. Push it to our mock database so the app remembers it!
-    initialSubmissions.push(newSubmission);
+    // Call our Next.js backend action!
+    const result = await submitDailyLog(newSubmission);
 
-    setSubmitted(true);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setSubmitted(true);
+    } else {
+      alert("⚠️ Database error: Failed to save submission. Please try again.");
+    }
   };
 
   const handleReset = () => {
