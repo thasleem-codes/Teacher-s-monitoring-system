@@ -19,6 +19,7 @@ export default function TeacherPortal() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] =
     useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -54,6 +55,12 @@ export default function TeacherPortal() {
 
   const currentTeacher: Teacher | undefined = teachersList.find(
     (t) => t.id === selectedTeacherId,
+  );
+
+  const filteredTeachers = teachersList.filter(
+    (t) =>
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.department.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Real-time Day & Date
@@ -244,27 +251,56 @@ export default function TeacherPortal() {
                 {isDropdownOpen && (
                   <div
                     className="fixed inset-0 z-20"
-                    onClick={() => setIsDropdownOpen(false)}
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setSearchQuery(""); // Reset search when closed
+                    }}
                   />
                 )}
                 {isDropdownOpen && (
-                  <div className="absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-30 divide-y divide-slate-800/60 animate-[fadeInUp_0.15s_ease-out_forwards]">
-                    {/* FIXED: Changed initialTeachers.map to teachersList.map */}
-                    {teachersList.map((t) => (
-                      <div
-                        key={t.id}
-                        onClick={() => {
-                          setSelectedTeacherId(t.id);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`px-4 py-3.5 text-sm font-medium cursor-pointer transition-colors flex items-center justify-between ${selectedTeacherId === t.id ? "bg-emerald-600/15 text-emerald-400 border-l-2 border-emerald-500 font-semibold pl-3.5" : "text-slate-300 hover:bg-slate-800 hover:text-emerald-300"}`}
-                      >
-                        <span>{t.name}</span>
-                        <span className="text-xs text-slate-500 font-normal">
-                          {t.department}
+                  <div className="absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-30 flex flex-col max-h-[350px] overflow-hidden animate-[fadeInUp_0.15s_ease-out_forwards]">
+                    {/* NEW: Sticky Search Bar */}
+                    <div className="p-3 border-b border-slate-800 bg-slate-900 z-10 shrink-0">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">
+                          🔍
                         </span>
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Search your name..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-8 pr-3 text-sm text-white focus:border-emerald-500 outline-none placeholder:text-slate-500"
+                        />
                       </div>
-                    ))}
+                    </div>
+
+                    {/* NEW: Scrollable Filtered List */}
+                    <div className="overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
+                      {filteredTeachers.length > 0 ? (
+                        filteredTeachers.map((t) => (
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              setSelectedTeacherId(t.id);
+                              setIsDropdownOpen(false);
+                              setSearchQuery(""); // Reset search after picking
+                            }}
+                            className={`px-4 py-3.5 text-sm font-medium cursor-pointer transition-colors flex items-center justify-between ${selectedTeacherId === t.id ? "bg-emerald-600/15 text-emerald-400 border-l-2 border-emerald-500 font-semibold pl-3.5" : "text-slate-300 hover:bg-slate-800 hover:text-emerald-300"}`}
+                          >
+                            <span>{t.name}</span>
+                            <span className="text-xs text-slate-500 font-normal">
+                              {t.department}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-6 text-center text-sm text-slate-500">
+                          No faculty found matching "{searchQuery}"
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
