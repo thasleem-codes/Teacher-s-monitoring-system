@@ -1,41 +1,43 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-// Fixed the import name here to 'initialQuestions'
+import Image from "next/image";
+import { Teacher, Question } from "../data/mockData";
 import {
-  initialTeachers,
-  initialQuestions,
-  Teacher,
-} from "../data/mockData";
-
-import { getTeachers, submitDailyLog, checkTodaySubmission } from "../actions";
+  getTeachers,
+  getQuestions,
+  submitDailyLog,
+  checkTodaySubmission,
+} from "../actions";
 
 export default function TeacherPortal() {
   const [teachersList, setTeachersList] = useState<Teacher[]>([]);
+  const [questionsList, setQuestionsList] = useState<Question[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [isStarted, setIsStarted] = useState<boolean>(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-
-  // New backend states
   const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] =
     useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Fetch teachers from Supabase when page loads
+  // Fetch both Teachers and Questions from Supabase
   useEffect(() => {
-    async function loadTeachers() {
-      const data = await getTeachers();
-      if (data.length > 0) setTeachersList(data);
+    async function loadDatabase() {
+      const [teachersData, questionsData] = await Promise.all([
+        getTeachers(),
+        getQuestions(),
+      ]);
+      if (teachersData.length > 0) setTeachersList(teachersData);
+      if (questionsData.length > 0) setQuestionsList(questionsData);
     }
-    loadTeachers();
+    loadDatabase();
   }, []);
 
   // Check database if selected teacher already submitted today
-  const todayRawDate = new Date().toISOString().split("T")[0]; // Generates YYYY-MM-DD
+  const todayRawDate = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     async function verifyDailyLock() {
@@ -53,19 +55,28 @@ export default function TeacherPortal() {
   const currentTeacher: Teacher | undefined = teachersList.find(
     (t) => t.id === selectedTeacherId,
   );
-  // ... rest of your date logic remains the same
 
   // Real-time Day & Date
   const today = new Date();
-  const currentDayName = "Monday"; // For testing Monday manual question
+  const daysOfWeek = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const currentDayName = daysOfWeek[today.getDay()]; // ← Reads dynamically from system clock!
+
   const formattedDate = today.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  // Fixed the variable name here to 'initialQuestions'
-  const visibleQuestions = initialQuestions.filter((q) => {
+  // Filter questions based on role and day
+  const visibleQuestions = questionsList.filter((q) => {
     if (q.group === "class_teacher" && !currentTeacher?.isClassTeacher)
       return false;
     if (q.day && q.day !== "Everyday" && q.day !== currentDayName) return false;
@@ -101,7 +112,6 @@ export default function TeacherPortal() {
       notes: answers["q4"] || "",
     };
 
-    // Call our Next.js backend action!
     const result = await submitDailyLog(newSubmission);
 
     setIsSubmitting(false);
@@ -136,11 +146,7 @@ export default function TeacherPortal() {
             <span className="font-semibold text-emerald-400">
               {currentTeacher?.name}
             </span>
-            . Your daily activity has been logged for{" "}
-            <span className="text-white font-medium">
-              {currentTeacher?.department}
-            </span>{" "}
-            department evaluation.
+            . Your daily activity has been logged.
           </p>
           <Link
             href="/"
@@ -212,7 +218,7 @@ export default function TeacherPortal() {
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className={`w-full bg-slate-950/90 border rounded-2xl px-4 py-4 text-left font-semibold text-sm transition-all flex items-center justify-between shadow-inner ${isDropdownOpen ? "border-emerald-500 ring-2 ring-emerald-500/20 text-white" : "border-slate-750 text-slate-200 hover:border-slate-600"}`}
+                  className={`w-full bg-slate-950/90 border rounded-2xl px-4 py-4 text-left font-semibold text-sm transition-all flex items-center justify-between shadow-inner ${isDropdownOpen ? "border-emerald-500 ring-2 ring-emerald-500/20 text-white" : "border-slate-700 text-slate-200 hover:border-slate-600"}`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-slate-500 text-base leading-none">
@@ -242,8 +248,9 @@ export default function TeacherPortal() {
                   />
                 )}
                 {isDropdownOpen && (
-                  <div className="absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-750 rounded-2xl shadow-2xl overflow-hidden z-30 divide-y divide-slate-800/60 animate-[fadeInUp_0.15s_ease-out_forwards]">
-                    {initialTeachers.map((t) => (
+                  <div className="absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-30 divide-y divide-slate-800/60 animate-[fadeInUp_0.15s_ease-out_forwards]">
+                    {/* FIXED: Changed initialTeachers.map to teachersList.map */}
+                    {teachersList.map((t) => (
                       <div
                         key={t.id}
                         onClick={() => {
@@ -265,7 +272,7 @@ export default function TeacherPortal() {
               <button
                 disabled={!selectedTeacherId}
                 onClick={() => setIsStarted(true)}
-                className={`group w-full font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-sm ${selectedTeacherId ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white shadow-emerald-600/25 cursor-pointer active:scale-[0.98]" : "bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-750/80"}`}
+                className={`group w-full font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-sm ${selectedTeacherId ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white shadow-emerald-600/25 cursor-pointer active:scale-[0.98]" : "bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700/80"}`}
               >
                 <span>Continue to Report</span>
                 <span
@@ -316,7 +323,7 @@ export default function TeacherPortal() {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => setIsStarted(false)}
+              onClick={handleReset}
               className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 px-4 rounded-xl transition text-xs"
             >
               ← Change Name
@@ -415,9 +422,12 @@ export default function TeacherPortal() {
             ))}
             <button
               type="submit"
-              className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-2xl transition duration-200 shadow-xl shadow-emerald-600/25 flex items-center justify-center gap-2 active:scale-[0.98]"
+              disabled={isSubmitting}
+              className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-bold py-4 px-6 rounded-2xl transition duration-200 shadow-xl shadow-emerald-600/25 flex items-center justify-center gap-2 active:scale-[0.98]"
             >
-              <span>Submit Daily Checklist</span>
+              <span>
+                {isSubmitting ? "Saving to Cloud..." : "Submit Daily Checklist"}
+              </span>
               <span>✓</span>
             </button>
           </form>

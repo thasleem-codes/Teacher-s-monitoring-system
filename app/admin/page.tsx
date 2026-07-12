@@ -1,18 +1,25 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  initialTeachers,
-  initialSubmissions,
-  initialLeaderboard,
-  initialQuestions,
   Teacher,
   TeacherRanking,
   DailyLogSubmission,
   Question,
+  initialLeaderboard, // Keeping mock leaderboard until we build a complex SQL query for it
 } from "../data/mockData";
+import {
+  getTeachers,
+  getSubmissions,
+  getQuestions,
+  addTeacherToDb,
+  deleteTeacherFromDb,
+  saveQuestionToDb,
+  deleteQuestionFromDb,
+  updateSubmissionOverride,
+} from "../actions";
 
 interface AlertModalState {
   isOpen: boolean;
@@ -22,6 +29,10 @@ interface AlertModalState {
 }
 
 export default function AdminDashboard() {
+  // ==========================================
+  // UNCOMMENTED & RESTORED STATE VARIABLES
+  // ==========================================
+
   // Auth & Settings State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [usernameInput, setUsernameInput] = useState<string>("");
@@ -35,7 +46,7 @@ export default function AdminDashboard() {
   const [newUsername, setNewUsername] = useState<string>("admin");
   const [newPassword, setNewPassword] = useState<string>("admin123");
 
-  // Navigation & Filter State (NEW TABS ADDED: 'questions' and 'breakdown')
+  // Navigation & Filter State
   const [activeTab, setActiveTab] = useState<
     | "analytics"
     | "defaulters"
@@ -51,14 +62,6 @@ export default function AdminDashboard() {
   const [customStartDate, setCustomStartDate] = useState<string>("2026-07-01");
   const [customEndDate, setCustomEndDate] = useState<string>("2026-07-12");
 
-  // Data Lists
-  const [teachersList, setTeachersList] = useState<Teacher[]>(initialTeachers);
-  const [submissionsList, setSubmissionsList] =
-    useState<DailyLogSubmission[]>(initialSubmissions);
-  const [leaderboardList] = useState<TeacherRanking[]>(initialLeaderboard);
-  const [questionsList, setQuestionsList] =
-    useState<Question[]>(initialQuestions);
-
   // Add Faculty Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [newTeacherForm, setNewTeacherForm] = useState({
@@ -68,7 +71,7 @@ export default function AdminDashboard() {
     isClassTeacher: false,
   });
 
-  // REQUIREMENT 1: Question Studio (CRUD) State
+  // Question Studio (CRUD) State
   const [isQuestionModalOpen, setIsQuestionModalOpen] =
     useState<boolean>(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
@@ -82,7 +85,7 @@ export default function AdminDashboard() {
     day: "Everyday",
   });
 
-  // REQUIREMENT 2: Item-by-Item Breakdown State
+  // Item-by-Item Breakdown State
   const [selectedBreakdownQuestionId, setSelectedBreakdownQuestionId] =
     useState<string>("q1");
 
@@ -101,6 +104,31 @@ export default function AdminDashboard() {
     type: "info",
   });
 
+  // Database Data Lists
+  const [teachersList, setTeachersList] = useState<Teacher[]>([]);
+  const [submissionsList, setSubmissionsList] = useState<DailyLogSubmission[]>(
+    [],
+  );
+  const [questionsList, setQuestionsList] = useState<Question[]>([]);
+  const [leaderboardList, setLeaderboardList] =
+    useState<TeacherRanking[]>(initialLeaderboard);
+
+  // Fetch all database tables when Admin logs in or page loads
+  const loadAdminDatabase = async () => {
+    const [tData, sData, qData] = await Promise.all([
+      getTeachers(),
+      getSubmissions(),
+      getQuestions(),
+    ]);
+    setTeachersList(tData);
+    setSubmissionsList(sData);
+    setQuestionsList(qData);
+  };
+
+  useEffect(() => {
+    loadAdminDatabase();
+  }, []);
+
   const triggerAlert = (
     title: string,
     message: string,
@@ -109,7 +137,7 @@ export default function AdminDashboard() {
     setCustomAlert({ isOpen: true, title, message, type });
   };
 
-  const todayRaw = "2026-07-12";
+  const todayRaw = new Date().toISOString().split("T")[0]; // Dynamically grabs today's YYYY-MM-DD
   const todayFormatted = new Date().toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -194,7 +222,6 @@ export default function AdminDashboard() {
     printWindow.document.close();
     printWindow.focus();
 
-    // Slight delay to ensure the browser paints the CSS before opening the print dialog
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
@@ -220,7 +247,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddTeacher = (e: React.FormEvent) => {
+  const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     const newT: Teacher = {
       id: `t_${Date.now()}`,
@@ -229,43 +256,59 @@ export default function AdminDashboard() {
       department: newTeacherForm.department,
       isClassTeacher: newTeacherForm.isClassTeacher,
     };
-    setTeachersList([newT, ...teachersList]);
-    setIsAddModalOpen(false);
-    setNewTeacherForm({
-      name: "",
-      subject: "",
-      department: "UP & HS",
-      isClassTeacher: false,
-    });
-    triggerAlert(
-      "Faculty Added",
-      `${newT.name} has been successfully added to the ${newT.department} directory.`,
-      "success",
-    );
+
+    const res = await addTeacherToDb(newT);
+    if (res.success) {
+      await loadAdminDatabase();
+      setIsAddModalOpen(false);
+      setNewTeacherForm({
+        name: "",
+        subject: "",
+        department: "UP & HS",
+        isClassTeacher: false,
+      });
+      triggerAlert(
+        "Faculty Added",
+        `${newT.name} has been successfully saved to the database.`,
+        "success",
+      );
+    } else {
+      triggerAlert(
+        "Database Error",
+        "Failed to add teacher to Supabase.",
+        "warning",
+      );
+    }
   };
 
-  const handleDeleteTeacher = (t: Teacher) => {
-    setTeachersList(teachersList.filter((item) => item.id !== t.id));
-    triggerAlert(
-      "Faculty Removed",
-      `${t.name} has been removed from the system.`,
-      "warning",
-    );
+  const handleDeleteTeacher = async (t: Teacher) => {
+    const res = await deleteTeacherFromDb(t.id);
+    if (res.success) {
+      await loadAdminDatabase();
+      triggerAlert(
+        "Faculty Removed",
+        `${t.name} has been deleted from the database.`,
+        "warning",
+      );
+    }
   };
 
   const handleSaveCredentials = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Set the primary credential checker state
     setAdminCreds({ username: newUsername, password: newPassword });
     setIsSettingsOpen(false);
+
     triggerAlert(
       "Settings Updated",
-      "Admin credentials have been successfully updated!",
+      `Admin credentials updated successfully! New Username: ${newUsername}`,
       "success",
     );
   };
 
   // =================================================================
-  // REQUIREMENT 1: QUESTION STUDIO CRUD HANDLERS
+  // QUESTION STUDIO CRUD HANDLERS
   // =================================================================
   const handleOpenAddQuestion = () => {
     setEditingQuestionId(null);
@@ -291,40 +334,34 @@ export default function AdminDashboard() {
     setIsQuestionModalOpen(true);
   };
 
-  const handleSaveQuestion = (e: React.FormEvent) => {
+  const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingQuestionId) {
-      setQuestionsList(
-        questionsList.map((q) =>
-          q.id === editingQuestionId
-            ? { ...questionForm, id: editingQuestionId }
-            : q,
-        ),
-      );
+    const questionToSave = editingQuestionId
+      ? { ...questionForm, id: editingQuestionId }
+      : { ...questionForm, id: `q_${Date.now()}` };
+
+    const res = await saveQuestionToDb(questionToSave);
+    if (res.success) {
+      await loadAdminDatabase();
+      setIsQuestionModalOpen(false);
       triggerAlert(
-        "Question Updated",
-        "The evaluation checklist question has been updated.",
-        "success",
-      );
-    } else {
-      const newQ: Question = { ...questionForm, id: `q_${Date.now()}` };
-      setQuestionsList([...questionsList, newQ]);
-      triggerAlert(
-        "Question Created",
-        "A new question has been added to the evaluation checklist.",
+        "Question Saved",
+        "The evaluation checklist question has been updated in Supabase.",
         "success",
       );
     }
-    setIsQuestionModalOpen(false);
   };
 
-  const handleDeleteQuestion = (id: string) => {
-    setQuestionsList(questionsList.filter((q) => q.id !== id));
-    triggerAlert(
-      "Question Removed",
-      "The question has been deleted from future evaluation checklists.",
-      "warning",
-    );
+  const handleDeleteQuestion = async (id: string) => {
+    const res = await deleteQuestionFromDb(id);
+    if (res.success) {
+      await loadAdminDatabase();
+      triggerAlert(
+        "Question Removed",
+        "The question has been deleted from future evaluation checklists.",
+        "warning",
+      );
+    }
   };
 
   const handleOpenAuditModal = (log: DailyLogSubmission) => {
@@ -334,29 +371,26 @@ export default function AdminDashboard() {
     setAdminAuditNote(log.adminNotes || "");
   };
 
-  const handleSaveOverride = (e: React.FormEvent) => {
+  const handleSaveOverride = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAuditLog) return;
-    const updatedSubmissions = submissionsList.map((item) => {
-      if (item.id === selectedAuditLog.id) {
-        return {
-          ...item,
-          score: Number(overrideScore),
-          status: overrideStatus,
-          isOverridden: true,
-          adminNotes:
-            adminAuditNote || "Score manually verified and updated by HOD.",
-        };
-      }
-      return item;
-    });
-    setSubmissionsList(updatedSubmissions);
-    setSelectedAuditLog(null);
-    triggerAlert(
-      "Score Overridden",
-      `The evaluation score for ${selectedAuditLog.teacherName} has been updated to ${overrideScore}%.`,
-      "success",
+
+    const res = await updateSubmissionOverride(
+      selectedAuditLog.id,
+      Number(overrideScore),
+      overrideStatus,
+      adminAuditNote || "Score manually verified and updated by HOD.",
     );
+
+    if (res.success) {
+      await loadAdminDatabase();
+      setSelectedAuditLog(null);
+      triggerAlert(
+        "Score Overridden",
+        `The evaluation score for ${selectedAuditLog.teacherName} has been permanently updated to ${overrideScore}%.`,
+        "success",
+      );
+    }
   };
 
   // Data Filtering
@@ -396,13 +430,15 @@ export default function AdminDashboard() {
       : 0;
 
   const taskCompletionRates = {
-    manual: filteredSubmissions.filter((s) => s.tasksCompleted.manualSubmitted)
-      .length,
-    classes: filteredSubmissions.filter((s) => s.tasksCompleted.classesTaken)
-      .length,
-    registry: filteredSubmissions.filter(
-      (s) => s.tasksCompleted.registryUpdated,
-    ).length,
+    manual:
+      filteredSubmissions.filter((s) => s.tasksCompleted?.manualSubmitted)
+        .length || 0,
+    classes:
+      filteredSubmissions.filter((s) => s.tasksCompleted?.classesTaken)
+        .length || 0,
+    registry:
+      filteredSubmissions.filter((s) => s.tasksCompleted?.registryUpdated)
+        .length || 0,
     total: filteredSubmissions.length || 1,
   };
 
@@ -413,7 +449,8 @@ export default function AdminDashboard() {
     return (
       <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-6 selection:bg-emerald-600">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-linear-to-tr from-emerald-600/15 to-teal-500/15 blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
+        {/* FIXED: bg-gradient-to-tr instead of bg-linear-to-tr */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/15 to-teal-500/15 blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
 
         <header className="w-full max-w-md mx-auto flex items-center justify-between py-4 border-b border-slate-900 z-10">
           <div className="flex items-center gap-2.5">
@@ -506,7 +543,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <footer className="w-full text-center py-4 text-xs text-slate-500">
-          Powred by{" "}
+          Powered by{" "}
           <span className="text-emerald-400 font-semibold">Code Craft</span> |
           6282811230
         </footer>
@@ -748,7 +785,13 @@ export default function AdminDashboard() {
                       <div className="shrink-0">
                         {q.type === "boolean" ? (
                           <span
-                            className={`text-xs font-bold px-3 py-1 rounded-lg border ${isYes ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : isNo ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-slate-800 text-slate-400 border-slate-700"}`}
+                            className={`text-xs font-bold px-3 py-1 rounded-lg border ${
+                              isYes
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : isNo
+                                  ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                  : "bg-slate-800 text-slate-400 border-slate-700"
+                            }`}
                           >
                             {isYes ? "✓ YES" : isNo ? "✕ NO" : teacherAnswer}
                           </span>
@@ -1032,7 +1075,11 @@ export default function AdminDashboard() {
                 <button
                   key={dept}
                   onClick={() => setSelectedDept(dept)}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all ${selectedDept === dept ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}
+                  className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                    selectedDept === dept
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                  }`}
                 >
                   {dept}
                 </button>
@@ -1046,14 +1093,22 @@ export default function AdminDashboard() {
             </label>
             <button
               onClick={() => setActiveTab("analytics")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === "analytics" ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === "analytics"
+                  ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+              }`}
             >
               <span>📊</span>
               <span>Overview & Charts</span>
             </button>
             <button
               onClick={() => setActiveTab("defaulters")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === "defaulters" ? "bg-red-500/15 text-red-400 border border-red-500/30" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === "defaulters"
+                  ? "bg-red-500/15 text-red-400 border border-red-500/30"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <span>⚠️</span>
@@ -1067,23 +1122,34 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setActiveTab("submissions")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === "submissions" ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === "submissions"
+                  ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+              }`}
             >
               <span>📋</span>
               <span>Submissions Report</span>
             </button>
 
-            {/* REQUIREMENT 1 & 2: NEW SIDEBAR TABS */}
             <button
               onClick={() => setActiveTab("questions")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === "questions" ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === "questions"
+                  ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+              }`}
             >
               <span>❓</span>
               <span>Question Studio</span>
             </button>
             <button
               onClick={() => setActiveTab("breakdown")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === "breakdown" ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === "breakdown"
+                  ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+              }`}
             >
               <span>🎯</span>
               <span>Item Breakdown</span>
@@ -1091,7 +1157,11 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab("faculty")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === "faculty" ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === "faculty"
+                  ? "bg-emerald-600/15 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+              }`}
             >
               <span>👨‍🏫</span>
               <span>Faculty Directory</span>
@@ -1101,7 +1171,11 @@ export default function AdminDashboard() {
 
         <div className="pt-6 border-t border-slate-800/80 space-y-2">
           <button
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => {
+              setNewUsername(adminCreds.username);
+              setNewPassword(adminCreds.password);
+              setIsSettingsOpen(true);
+            }}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800/60 hover:text-white transition"
           >
             <span>⚙️</span>
@@ -1171,7 +1245,11 @@ export default function AdminDashboard() {
                   <button
                     key={period}
                     onClick={() => setTimeRange(period)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${timeRange === period ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "text-slate-400 hover:text-white"}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                      timeRange === period
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                        : "text-slate-400 hover:text-white"
+                    }`}
                   >
                     {period === "today"
                       ? "Today"
@@ -1324,7 +1402,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
                           <div
-                            className="bg-linear-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.6s_ease-out_forwards]"
+                            className="bg-gradient-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.6s_ease-out_forwards]"
                             style={{
                               width: `${(taskCompletionRates.registry / taskCompletionRates.total) * 100}%`,
                             }}
@@ -1365,7 +1443,11 @@ export default function AdminDashboard() {
                           className="flex items-center gap-4 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80"
                         >
                           <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${t.rank === 1 ? "bg-amber-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
+                              t.rank === 1
+                                ? "bg-amber-500 text-slate-950"
+                                : "bg-slate-800 text-slate-300"
+                            }`}
                           >
                             {t.rank === 1 ? "👑" : `#${t.rank}`}
                           </div>
@@ -1380,7 +1462,11 @@ export default function AdminDashboard() {
                             </div>
                             <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full animate-[chartRace_1s_ease-out_forwards] ${t.rank === 1 ? "bg-gradient-to-r from-amber-500 to-yellow-300" : "bg-emerald-500"}`}
+                                className={`h-full rounded-full animate-[chartRace_1s_ease-out_forwards] ${
+                                  t.rank === 1
+                                    ? "bg-gradient-to-r from-amber-500 to-yellow-300"
+                                    : "bg-emerald-500"
+                                }`}
                                 style={{
                                   width: `${t.monthlyScore}%`,
                                   animationDuration: `${1 + i * 0.2}s`,
@@ -1419,7 +1505,6 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
-                {/* UPDATED EXPORT BUTTON */}
                 {missingTeachersList.length > 0 && (
                   <button
                     onClick={handleExportPDF}
@@ -1529,7 +1614,15 @@ export default function AdminDashboard() {
                             {log.teacherName}
                           </span>
                           <span
-                            className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${log.status === "Complete" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : log.status === "Overridden" ? "bg-purple-500/10 text-purple-400 border-purple-500/20 font-extrabold" : log.status === "Rejected" ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}
+                            className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              log.status === "Complete"
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : log.status === "Overridden"
+                                  ? "bg-purple-500/10 text-purple-400 border-purple-500/20 font-extrabold"
+                                  : log.status === "Rejected"
+                                    ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                    : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            }`}
                           >
                             {log.status}
                           </span>
@@ -1571,7 +1664,13 @@ export default function AdminDashboard() {
                             Task Score
                           </div>
                           <div
-                            className={`text-base font-black ${log.status === "Rejected" ? "text-red-400 line-through" : log.isOverridden ? "text-purple-400" : "text-emerald-400"}`}
+                            className={`text-base font-black ${
+                              log.status === "Rejected"
+                                ? "text-red-400 line-through"
+                                : log.isOverridden
+                                  ? "text-purple-400"
+                                  : "text-emerald-400"
+                            }`}
                           >
                             {log.score}% Score
                           </div>
@@ -1691,14 +1790,13 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
-                {/* Question Selector */}
                 <div className="w-full md:w-80">
                   <select
                     value={selectedBreakdownQuestionId}
                     onChange={(e) =>
                       setSelectedBreakdownQuestionId(e.target.value)
                     }
-                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-4 py-3 text-white text-xs font-semibold focus:border-emerald-500 outline-none cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-xs font-semibold focus:border-emerald-500 outline-none cursor-pointer"
                   >
                     {questionsList.map((q, i) => (
                       <option key={q.id} value={q.id}>
@@ -1709,7 +1807,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Breakdown Report Feed */}
               <div className="bg-slate-900/80 rounded-3xl border border-slate-800 overflow-hidden shadow-xl">
                 <div className="p-6 border-b border-slate-800/80 flex justify-between items-center">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
