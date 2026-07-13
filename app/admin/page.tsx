@@ -8,7 +8,7 @@ import {
   TeacherRanking,
   DailyLogSubmission,
   Question,
-  initialLeaderboard, // Keeping mock leaderboard until we build a complex SQL query for it
+  initialLeaderboard,
 } from "../data/mockData";
 import {
   getTeachers,
@@ -30,21 +30,24 @@ interface AlertModalState {
 
 export default function AdminDashboard() {
   // ==========================================
-  // UNCOMMENTED & RESTORED STATE VARIABLES
+  // STATE VARIABLES
   // ==========================================
 
   // Auth & Settings State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAppLoaded, setIsAppLoaded] = useState<boolean>(false); // Fixes Next.js hydration issues
   const [usernameInput, setUsernameInput] = useState<string>("");
   const [passwordInput, setPasswordInput] = useState<string>("");
   const [loginError, setLoginError] = useState<boolean>(false);
+
   const [adminCreds, setAdminCreds] = useState({
     username: "admin",
     password: "admin123",
   });
+
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [newUsername, setNewUsername] = useState<string>("admin");
-  const [newPassword, setNewPassword] = useState<string>("admin123");
+  const [newUsername, setNewUsername] = useState<string>("");
+  const [newPassword, setNewPassword] = useState<string>("");
 
   // Navigation & Filter State
   const [activeTab, setActiveTab] = useState<
@@ -110,24 +113,65 @@ export default function AdminDashboard() {
     [],
   );
   const [questionsList, setQuestionsList] = useState<Question[]>([]);
-  const [leaderboardList, setLeaderboardList] =
-    useState<TeacherRanking[]>(initialLeaderboard);
+  const [leaderboardList, setLeaderboardList] = useState<TeacherRanking[]>([]);
 
-  // Fetch all database tables when Admin logs in or page loads
+  // ==========================================
+  // INITIALIZATION & DATABASE LOADING
+  // ==========================================
+
+  // Load saved credentials securely on mount
+  useEffect(() => {
+    const savedCreds = localStorage.getItem("krhs_admin_creds");
+    if (savedCreds) {
+      setAdminCreds(JSON.parse(savedCreds));
+    }
+    setIsAppLoaded(true);
+    loadAdminDatabase();
+  }, []);
+
   const loadAdminDatabase = async () => {
     const [tData, sData, qData] = await Promise.all([
       getTeachers(),
       getSubmissions(),
       getQuestions(),
     ]);
+
     setTeachersList(tData);
     setSubmissionsList(sData);
     setQuestionsList(qData);
-  };
 
-  useEffect(() => {
-    loadAdminDatabase();
-  }, []);
+    // DYNAMIC LEADERBOARD CALCULATION
+    const rankings = tData.map((teacher) => {
+      const teacherLogs = sData.filter(
+        (log: any) => log.teacherId === teacher.id,
+      );
+      const totalScore = teacherLogs.reduce(
+        (acc: number, log: any) => acc + log.score,
+        0,
+      );
+      const avgScore =
+        teacherLogs.length > 0
+          ? Math.round(totalScore / teacherLogs.length)
+          : 0;
+
+      return {
+        teacherId: teacher.id,
+        name: teacher.name,
+        subject: (teacher as any).subject || "",
+        department: teacher.department,
+        monthlyScore: avgScore,
+        streak: teacherLogs.length,
+        tasksCompletedRate: 0,
+        rank: 0,
+      };
+    });
+
+    const sortedRankings = rankings
+      .sort((a, b) => b.monthlyScore - a.monthlyScore)
+      .map((item, index) => ({ ...item, rank: index + 1 }));
+
+    setLeaderboardList(sortedRankings);
+  };
 
   const triggerAlert = (
     title: string,
@@ -137,13 +181,47 @@ export default function AdminDashboard() {
     setCustomAlert({ isOpen: true, title, message, type });
   };
 
-  const todayRaw = new Date().toISOString().split("T")[0]; // Dynamically grabs today's YYYY-MM-DD
+  const todayRaw = new Date().toISOString().split("T")[0];
   const todayFormatted = new Date().toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
+  // ==========================================
+  // SECURE AUTHENTICATION HANDLERS
+  // ==========================================
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // SECURITY FIX: Removed the || usernameInput === "admin" backdoor
+    if (
+      usernameInput === adminCreds.username &&
+      passwordInput === adminCreds.password
+    ) {
+      setIsAuthenticated(true);
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+    }
+  };
+
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newCreds = { username: newUsername, password: newPassword };
+
+    // Save to state and persistent browser storage
+    setAdminCreds(newCreds);
+    localStorage.setItem("krhs_admin_creds", JSON.stringify(newCreds));
+    setIsSettingsOpen(false);
+
+    triggerAlert(
+      "Settings Updated",
+      `Admin credentials updated successfully! New Username: ${newUsername}`,
+      "success",
+    );
+  };
 
   // =================================================================
   // NATIVE PDF EXPORT ENGINE
@@ -233,19 +311,9 @@ export default function AdminDashboard() {
     }, 250);
   };
 
-  // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      (usernameInput === adminCreds.username || usernameInput === "admin") &&
-      passwordInput === adminCreds.password
-    ) {
-      setIsAuthenticated(true);
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-    }
-  };
+  // ==========================================
+  // DATABASE HANDLERS
+  // ==========================================
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,23 +361,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveCredentials = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Set the primary credential checker state
-    setAdminCreds({ username: newUsername, password: newPassword });
-    setIsSettingsOpen(false);
-
-    triggerAlert(
-      "Settings Updated",
-      `Admin credentials updated successfully! New Username: ${newUsername}`,
-      "success",
-    );
-  };
-
-  // =================================================================
-  // QUESTION STUDIO CRUD HANDLERS
-  // =================================================================
   const handleOpenAddQuestion = () => {
     setEditingQuestionId(null);
     setQuestionForm({
@@ -445,11 +496,13 @@ export default function AdminDashboard() {
   // ==========================================
   // SCREEN 1: LOGIN GATEWAY
   // ==========================================
+
+  if (!isAppLoaded) return null; // Prevents hydration flicker
+
   if (!isAuthenticated) {
     return (
       <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-6 selection:bg-emerald-600">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
-        {/* FIXED: bg-gradient-to-tr instead of bg-linear-to-tr */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/15 to-teal-500/15 blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
 
         <header className="w-full max-w-md mx-auto flex items-center justify-between py-4 border-b border-slate-900 z-10">
@@ -459,6 +512,7 @@ export default function AdminDashboard() {
               alt="KRHS Logo"
               width={28}
               height={28}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain"
             />
             <span className="font-bold text-sm tracking-tight">
@@ -512,9 +566,6 @@ export default function AdminDashboard() {
                   <label className="block text-xs font-bold uppercase text-slate-300">
                     Password
                   </label>
-                  <span className="text-[10px] text-emerald-400 font-mono">
-                    Hint: {adminCreds.username} / {adminCreds.password}
-                  </span>
                 </div>
                 <input
                   type="password"
@@ -591,7 +642,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* REQUIREMENT 1: QUESTION STUDIO MODAL */}
+      {/* QUESTION STUDIO MODAL */}
       {isQuestionModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-3xl max-w-lg w-full shadow-2xl animate-[fadeInUp_0.2s_ease-out_forwards]">
@@ -863,7 +914,7 @@ export default function AdminDashboard() {
                   rows={2}
                   value={adminAuditNote}
                   onChange={(e) => setAdminAuditNote(e.target.value)}
-                  placeholder="e.g., Verified teacher manual present on desk. Or: Class registry incomplete, docked 30 points."
+                  placeholder="e.g., Verified teacher manual present on desk."
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 focus:border-emerald-500 outline-none"
                 />
               </div>
@@ -915,7 +966,7 @@ export default function AdminDashboard() {
                   New Password
                 </label>
                 <input
-                  type="text"
+                  type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none font-mono"
@@ -1053,6 +1104,7 @@ export default function AdminDashboard() {
                 alt="KRHS Logo"
                 width={24}
                 height={24}
+                style={{ width: "auto", height: "auto" }}
                 className="object-contain"
               />
             </div>
@@ -1173,7 +1225,7 @@ export default function AdminDashboard() {
           <button
             onClick={() => {
               setNewUsername(adminCreds.username);
-              setNewPassword(adminCreds.password);
+              setNewPassword(""); // Force admin to retype new password securely
               setIsSettingsOpen(true);
             }}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800/60 hover:text-white transition"
@@ -1200,6 +1252,7 @@ export default function AdminDashboard() {
               alt="KRHS Logo"
               width={24}
               height={24}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain"
             />
             <span className="font-black text-sm">
