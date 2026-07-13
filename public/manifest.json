@@ -4,7 +4,7 @@
   "description": "Daily Teacher Evaluation System",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#020617",
+  "background_color": "#FFFFFF", 
   "theme_color": "#059669",
   "orientation": "portrait",
   "icons": [
