@@ -8,7 +8,6 @@ import {
   TeacherRanking,
   DailyLogSubmission,
   Question,
-  initialLeaderboard,
 } from "../data/mockData";
 import {
   getTeachers,
@@ -72,6 +71,7 @@ export default function AdminDashboard() {
     subject: "",
     department: "UP & HS" as any,
     isClassTeacher: false,
+    assignedClasses: "",
   });
 
   // Question Studio (CRUD) State
@@ -334,6 +334,7 @@ export default function AdminDashboard() {
         subject: "",
         department: "UP & HS",
         isClassTeacher: false,
+        assignedClasses: "",
       });
       triggerAlert(
         "Faculty Added",
@@ -690,6 +691,12 @@ export default function AdminDashboard() {
                   >
                     <option value="boolean">Yes / No (Task Boolean)</option>
                     <option value="text">Text Remark / Explanation</option>
+                    <option value="numeric">
+                      Numeric Count (e.g., Substitutions)
+                    </option>
+                    <option value="boolean_with_text">
+                      Yes/No + Text (If Yes, Explain)
+                    </option>
                   </select>
                 </div>
                 <div>
@@ -1058,6 +1065,23 @@ export default function AdminDashboard() {
                   <option value="HSS">HSS</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">
+                  Assigned Classes
+                </label>
+                <input
+                  type="text"
+                  value={newTeacherForm.assignedClasses}
+                  onChange={(e) =>
+                    setNewTeacherForm({
+                      ...newTeacherForm,
+                      assignedClasses: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., 10A, 10B, 9C"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none"
+                />
+              </div>
               <label className="flex items-center gap-3 cursor-pointer p-2 bg-slate-950 rounded-xl border border-slate-800">
                 <input
                   type="checkbox"
@@ -1376,8 +1400,7 @@ export default function AdminDashboard() {
                     {filteredLeaderboard[0]?.name || "No Data"}
                   </div>
                   <p className="text-xs text-amber-300/80 mt-2 font-semibold">
-                    Score: {filteredLeaderboard[0]?.monthlyScore || 0} / 100 •
-                    14 Day Streak
+                    Score: {filteredLeaderboard[0]?.monthlyScore || 0} / 100
                   </p>
                 </div>
               </div>

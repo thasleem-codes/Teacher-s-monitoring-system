@@ -425,33 +425,136 @@ export default function TeacherPortal() {
                   <span className="text-emerald-400 mr-2">{index + 1}.</span>
                   {q.text}
                 </label>
-                {q.type === "boolean" ? (
-                  <div className="flex gap-4 pt-1">
-                    {["Yes", "No"].map((option) => (
-                      <label
-                        key={option}
-                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer text-sm font-semibold transition active:scale-[0.98] ${answers[q.id] === option ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20" : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800/60 hover:text-white"}`}
+                {/* 1. SIMPLE YES / NO */}
+                {q.type === "boolean" && (
+                  <div className="flex gap-3">
+                    {["Yes", "No"].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => handleAnswer(q.id, opt)}
+                        className={`flex-1 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 border ${answers[q.id] === opt ? (opt === "Yes" ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-red-500/20 border-red-500/50 text-red-400") : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
                       >
-                        <input
-                          type="radio"
-                          name={q.id}
-                          value={option}
-                          checked={answers[q.id] === option}
-                          onChange={(e) => handleChange(q.id, e.target.value)}
-                          className="sr-only"
-                          required
-                        />
-                        {option}
-                      </label>
+                        <div
+                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${answers[q.id] === opt ? "border-white" : "border-slate-600"}`}
+                        >
+                          {answers[q.id] === opt && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        {opt}
+                      </button>
                     ))}
                   </div>
-                ) : (
+                )}
+
+                {/* 2. CUSTOM MULTIPLE CHOICE (Google Forms Style) */}
+                {q.type === "multiple_choice" && (
+                  <div className="flex flex-wrap gap-3">
+                    {(q.custom_options || []).map((opt: string) => (
+                      <button
+                        key={opt}
+                        onClick={() => handleAnswer(q.id, opt)}
+                        className={`flex-1 min-w-[120px] py-2.5 px-4 rounded-xl font-bold text-sm transition flex items-center gap-2 border ${answers[q.id] === opt ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${answers[q.id] === opt ? "border-white" : "border-slate-600"}`}
+                        >
+                          {answers[q.id] === opt && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* 3. NUMERIC SCALE (Circle Buttons up to Limit) */}
+                {q.type === "scale" && (
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: (q.scale_limit || 5) + 1 }).map(
+                      (_, i) => {
+                        const val = i.toString();
+                        const label = i === 0 ? "Nil" : val;
+                        return (
+                          <button
+                            key={val}
+                            onClick={() => handleAnswer(q.id, val)}
+                            className={`w-12 h-12 rounded-full font-bold text-sm transition flex flex-col items-center justify-center border ${answers[q.id] === val ? "bg-emerald-600 border-emerald-500 text-white shadow-lg scale-110" : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+
+                {/* 4. CLASS SELECTOR (Multiple Checkboxes) */}
+                {q.type === "class_select" && (
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-3 uppercase font-bold tracking-wider">
+                      Select all that apply:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {/* Note: In your DB, ensure the teacher's assignedClasses is stored like "10A, 9B, 8C" */}
+                      {(currentTeacher?.assignedClasses
+                        ? currentTeacher.assignedClasses
+                            .split(",")
+                            .map((c) => c.trim())
+                        : ["No classes assigned"]
+                      ).map((className: string) => {
+                        const currentSelections = answers[q.id]
+                          ? answers[q.id].split(", ")
+                          : [];
+                        const isSelected =
+                          currentSelections.includes(className);
+
+                        return (
+                          <button
+                            key={className}
+                            onClick={() => {
+                              if (className === "No classes assigned") return;
+                              let newSelections;
+                              if (isSelected) {
+                                newSelections = currentSelections.filter(
+                                  (c: string) => c !== className,
+                                ); // Remove
+                              } else {
+                                newSelections = [
+                                  ...currentSelections,
+                                  className,
+                                ]; // Add
+                              }
+                              handleAnswer(q.id, newSelections.join(", "));
+                            }}
+                            className={`px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border ${isSelected ? "bg-emerald-600/20 border-emerald-500 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"}`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-500"}`}
+                            >
+                              {isSelected && (
+                                <span className="text-slate-950 text-[10px]">
+                                  ✓
+                                </span>
+                              )}
+                            </div>
+                            {className}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. STANDARD TEXT BOX */}
+                {q.type === "text" && (
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={answers[q.id] || ""}
-                    onChange={(e) => handleChange(q.id, e.target.value)}
-                    placeholder="Type any remarks, challenges, or student updates here..."
-                    className="w-full rounded-xl border border-slate-800 p-3 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-slate-900 text-white placeholder:text-slate-600 transition"
+                    onChange={(e) => handleAnswer(q.id, e.target.value)}
+                    placeholder="Type your explanation here..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white outline-none focus:border-emerald-500 transition-colors"
                   />
                 )}
               </div>
