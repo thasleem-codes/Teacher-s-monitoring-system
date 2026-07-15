@@ -13,15 +13,14 @@ import {
 
 export default function TeacherPortal() {
   const [teachersList, setTeachersList] = useState<Teacher[]>([]);
-  const [questionsList, setQuestionsList] = useState<Question[]>([]);
+  const [questionsList, setQuestionsList] = useState<any[]>([]); // Using 'any' to accommodate new db columns
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [isStarted, setIsStarted] = useState<boolean>(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] =
-    useState<boolean>(false);
+  const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Fetch both Teachers and Questions from Supabase
@@ -53,7 +52,7 @@ export default function TeacherPortal() {
     verifyDailyLock();
   }, [selectedTeacherId, todayRawDate]);
 
-  const currentTeacher: Teacher | undefined = teachersList.find(
+  const currentTeacher: any = teachersList.find(
     (t) => t.id === selectedTeacherId,
   );
 
@@ -74,7 +73,7 @@ export default function TeacherPortal() {
     "Friday",
     "Saturday",
   ];
-  const currentDayName = daysOfWeek[today.getDay()]; // ← Reads dynamically from system clock!
+  const currentDayName = daysOfWeek[today.getDay()];
 
   const formattedDate = today.toLocaleDateString("en-US", {
     month: "short",
@@ -90,7 +89,8 @@ export default function TeacherPortal() {
     return true;
   });
 
-  const handleChange = (questionId: string, value: string) => {
+  // FIXED: Renamed from handleChange to handleAnswer to match the JSX
+  const handleAnswer = (questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
@@ -116,7 +116,7 @@ export default function TeacherPortal() {
         registryUpdated: true,
       },
       answers: answers,
-      notes: answers["q4"] || "",
+      notes: "", 
     };
 
     const result = await submitDailyLog(newSubmission);
@@ -185,6 +185,7 @@ export default function TeacherPortal() {
               alt="KRHS Logo"
               width={28}
               height={28}
+              style={{ width: 'auto', height: 'auto' }}
               className="object-contain"
             />
             <span className="font-bold text-sm tracking-tight text-white">
@@ -253,13 +254,12 @@ export default function TeacherPortal() {
                     className="fixed inset-0 z-20"
                     onClick={() => {
                       setIsDropdownOpen(false);
-                      setSearchQuery(""); // Reset search when closed
+                      setSearchQuery(""); 
                     }}
                   />
                 )}
                 {isDropdownOpen && (
                   <div className="absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-30 flex flex-col max-h-[350px] overflow-hidden animate-[fadeInUp_0.15s_ease-out_forwards]">
-                    {/* NEW: Sticky Search Bar */}
                     <div className="p-3 border-b border-slate-800 bg-slate-900 z-10 shrink-0">
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">
@@ -276,7 +276,6 @@ export default function TeacherPortal() {
                       </div>
                     </div>
 
-                    {/* NEW: Scrollable Filtered List */}
                     <div className="overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
                       {filteredTeachers.length > 0 ? (
                         filteredTeachers.map((t) => (
@@ -285,7 +284,7 @@ export default function TeacherPortal() {
                             onClick={() => {
                               setSelectedTeacherId(t.id);
                               setIsDropdownOpen(false);
-                              setSearchQuery(""); // Reset search after picking
+                              setSearchQuery(""); 
                             }}
                             className={`px-4 py-3.5 text-sm font-medium cursor-pointer transition-colors flex items-center justify-between ${selectedTeacherId === t.id ? "bg-emerald-600/15 text-emerald-400 border-l-2 border-emerald-500 font-semibold pl-3.5" : "text-slate-300 hover:bg-slate-800 hover:text-emerald-300"}`}
                           >
@@ -306,6 +305,7 @@ export default function TeacherPortal() {
               </div>
 
               <button
+                type="button"
                 disabled={!selectedTeacherId}
                 onClick={() => setIsStarted(true)}
                 className={`group w-full font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-sm ${selectedTeacherId ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white shadow-emerald-600/25 cursor-pointer active:scale-[0.98]" : "bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700/80"}`}
@@ -425,12 +425,14 @@ export default function TeacherPortal() {
                   <span className="text-emerald-400 mr-2">{index + 1}.</span>
                   {q.text}
                 </label>
+                
                 {/* 1. SIMPLE YES / NO */}
                 {q.type === "boolean" && (
                   <div className="flex gap-3">
                     {["Yes", "No"].map((opt) => (
                       <button
                         key={opt}
+                        type="button"
                         onClick={() => handleAnswer(q.id, opt)}
                         className={`flex-1 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 border ${answers[q.id] === opt ? (opt === "Yes" ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-red-500/20 border-red-500/50 text-red-400") : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
                       >
@@ -453,6 +455,7 @@ export default function TeacherPortal() {
                     {(q.custom_options || []).map((opt: string) => (
                       <button
                         key={opt}
+                        type="button"
                         onClick={() => handleAnswer(q.id, opt)}
                         className={`flex-1 min-w-[120px] py-2.5 px-4 rounded-xl font-bold text-sm transition flex items-center gap-2 border ${answers[q.id] === opt ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
                       >
@@ -479,6 +482,7 @@ export default function TeacherPortal() {
                         return (
                           <button
                             key={val}
+                            type="button"
                             onClick={() => handleAnswer(q.id, val)}
                             className={`w-12 h-12 rounded-full font-bold text-sm transition flex flex-col items-center justify-center border ${answers[q.id] === val ? "bg-emerald-600 border-emerald-500 text-white shadow-lg scale-110" : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
                           >
@@ -497,57 +501,96 @@ export default function TeacherPortal() {
                       Select all that apply:
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {/* Note: In your DB, ensure the teacher's assignedClasses is stored like "10A, 9B, 8C" */}
-                      {(currentTeacher?.assignedClasses
-                        ? currentTeacher.assignedClasses
-                            .split(",")
-                            .map((c) => c.trim())
-                        : ["No classes assigned"]
-                      ).map((className: string) => {
-                        const currentSelections = answers[q.id]
-                          ? answers[q.id].split(", ")
-                          : [];
-                        const isSelected =
-                          currentSelections.includes(className);
+                      {/* Safely split assigned classes, filtering out empty strings */}
+                      {(() => {
+                        const rawClasses = currentTeacher?.assignedClasses || "";
+                        const classArray = rawClasses.split(",").map((c: string) => c.trim()).filter(Boolean);
+                        const displayArray = classArray.length > 0 ? classArray : ["No classes assigned"];
+                        
+                        return displayArray.map((className: string) => {
+                          const currentSelections = answers[q.id] ? answers[q.id].split(", ") : [];
+                          const isSelected = currentSelections.includes(className);
 
-                        return (
-                          <button
-                            key={className}
-                            onClick={() => {
-                              if (className === "No classes assigned") return;
-                              let newSelections;
-                              if (isSelected) {
-                                newSelections = currentSelections.filter(
-                                  (c: string) => c !== className,
-                                ); // Remove
-                              } else {
-                                newSelections = [
-                                  ...currentSelections,
-                                  className,
-                                ]; // Add
-                              }
-                              handleAnswer(q.id, newSelections.join(", "));
-                            }}
-                            className={`px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border ${isSelected ? "bg-emerald-600/20 border-emerald-500 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"}`}
-                          >
-                            <div
-                              className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-500"}`}
+                          return (
+                            <button
+                              key={className}
+                              type="button"
+                              onClick={() => {
+                                if (className === "No classes assigned") return;
+                                let newSelections;
+                                if (isSelected) {
+                                  newSelections = currentSelections.filter(
+                                    (c: string) => c !== className,
+                                  ); // Remove
+                                } else {
+                                  newSelections = [
+                                    ...currentSelections,
+                                    className,
+                                  ]; // Add
+                                }
+                                handleAnswer(q.id, newSelections.join(", "));
+                              }}
+                              className={`px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border ${isSelected ? "bg-emerald-600/20 border-emerald-500 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"}`}
                             >
-                              {isSelected && (
-                                <span className="text-slate-950 text-[10px]">
-                                  ✓
-                                </span>
-                              )}
-                            </div>
-                            {className}
-                          </button>
-                        );
-                      })}
+                              <div
+                                className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-500"}`}
+                              >
+                                {isSelected && (
+                                  <span className="text-slate-950 text-[10px]">
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                              {className}
+                            </button>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}
 
-                {/* 5. STANDARD TEXT BOX */}
+                {/* 5. COMPOSITE TYPE (Yes/No + Conditional Text) */}
+                {q.type === "boolean_with_text" && (
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      {["Yes", "No"].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            if (opt === "No") {
+                              handleAnswer(q.id, "No");
+                            } else {
+                              // Initialize Yes state
+                              handleAnswer(q.id, "Yes: ");
+                            }
+                          }}
+                          className={`flex-1 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 border ${answers[q.id]?.startsWith(opt) ? (opt === "Yes" ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-red-500/20 border-red-500/50 text-red-400") : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
+                        >
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${answers[q.id]?.startsWith(opt) ? "border-white" : "border-slate-600"}`}>
+                            {answers[q.id]?.startsWith(opt) && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Conditional Text Box shows up only if they select Yes */}
+                    {answers[q.id]?.startsWith("Yes") && (
+                      <input
+                        type="text"
+                        placeholder="Please explain or specify..."
+                        value={answers[q.id].replace(/^Yes:\s*/, "")}
+                        onChange={(e) => handleAnswer(q.id, `Yes: ${e.target.value}`)}
+                        className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl p-3 text-sm text-emerald-400 outline-none placeholder:text-slate-600 animate-[fadeInUp_0.2s_ease-out_forwards]"
+                        autoFocus
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* 6. STANDARD TEXT BOX */}
                 {q.type === "text" && (
                   <textarea
                     rows={2}

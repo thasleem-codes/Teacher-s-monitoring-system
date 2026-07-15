@@ -29,6 +29,7 @@ export async function addTeacherToDb(teacher: any) {
       subject: teacher.subject,
       department: teacher.department,
       is_class_teacher: teacher.isClassTeacher,
+      assigned_classes: teacher.assignedClasses, // Add this line
     },
   ]);
   if (error) return { success: false, error: error.message };
@@ -50,17 +51,16 @@ export async function deleteTeacherFromDb(id: string) {
 // ==========================================
 export async function getQuestions() {
   const { data, error } = await supabase.from("questions").select("*");
-  if (error) {
-    console.error("Error fetching questions:", error);
-    return [];
-  }
+  if (error) return [];
   return data.map((q: any) => ({
     id: q.id,
     text: q.text,
     type: q.type,
-    group: q.group_name, // Maps SQL group_name back to TypeScript group
+    group: q.group_name,
     points: q.points,
     day: q.day,
+    scale_limit: q.scale_limit, // Add this
+    custom_options: q.custom_options, // Add this
   }));
 }
 
@@ -73,6 +73,8 @@ export async function saveQuestionToDb(question: any) {
       group_name: question.group,
       points: question.points,
       day: question.day,
+      scale_limit: question.scale_limit, // Add this
+      custom_options: question.custom_options, // Add this
     },
   ]);
   if (error) return { success: false, error: error.message };
