@@ -2,6 +2,7 @@ import {
   DailyLogSubmission,
   Teacher,
   TeacherRanking,
+  Question,
 } from "../../data/mockData";
 
 interface AnalyticsOverviewProps {
@@ -21,6 +22,7 @@ interface AnalyticsOverviewProps {
     registry: number;
     total: number;
   };
+  questionsList: Question[];
 }
 
 export default function AnalyticsOverview({
@@ -30,6 +32,7 @@ export default function AnalyticsOverview({
   missingTeachersList,
   filteredLeaderboard,
   taskCompletionRates,
+  questionsList,
 }: AnalyticsOverviewProps) {
   return (
     <div className="space-y-8 animate-[fadeInUp_0.3s_ease-out_forwards]">
@@ -84,85 +87,57 @@ export default function AnalyticsOverview({
         <div className="bg-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-800 flex flex-col justify-between">
           <div>
             <h2 className="text-lg font-black text-white mb-1">
-              Task Completion Analysis
+              Checklist Compliance Insights
             </h2>
             <p className="text-xs text-slate-400 mb-6">
-              Percentage of specific checklist tasks marked as completed.
+              Automatically identifying high and low performance tasks.
             </p>
-            <div className="space-y-5">
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1.5">
-                  <span className="text-slate-300">
-                    📖 Teacher Manual Submitted (Monday Task)
-                  </span>
-                  <span className="text-emerald-400 font-mono">
-                    {Math.round(
-                      (taskCompletionRates.manual / taskCompletionRates.total) *
-                        100,
-                    )}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
-                  <div
-                    className="bg-linear-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.2s_ease-out_forwards]"
-                    style={{
-                      width: `${(taskCompletionRates.manual / taskCompletionRates.total) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1.5">
-                  <span className="text-slate-300">
-                    💻 IT & Language Classes Completed
-                  </span>
-                  <span className="text-emerald-400 font-mono">
-                    {Math.round(
-                      (taskCompletionRates.classes /
-                        taskCompletionRates.total) *
-                        100,
-                    )}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
-                  <div
-                    className="bg-linear-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.4s_ease-out_forwards]"
-                    style={{
-                      width: `${(taskCompletionRates.classes / taskCompletionRates.total) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1.5">
-                  <span className="text-slate-300">
-                    📋 Class Teacher Attendance Registry
-                  </span>
-                  <span className="text-emerald-400 font-mono">
-                    {Math.round(
-                      (taskCompletionRates.registry /
-                        taskCompletionRates.total) *
-                        100,
-                    )}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
-                  <div
-                    className="bg-linear-to-r from-emerald-600 to-teal-400 h-full rounded-full animate-[chartRace_1.6s_ease-out_forwards]"
-                    style={{
-                      width: `${(taskCompletionRates.registry / taskCompletionRates.total) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
+
+            <div className="space-y-6">
+              {/* Dynamic logic to calculate compliance per question */}
+              {questionsList.slice(0, 3).map((q) => {
+                const total = filteredSubmissions.length || 1;
+
+                const yesCount = filteredSubmissions.filter((s) => {
+
+                  const val = s.answers[q.id];
+                  if (!val) return false;
+
+                  // 2. Normalize to string and lowercase for comparison
+                  const normalizedVal = val.toString().toLowerCase();
+
+                  // 3. Match if it starts with "yes" (covers "Yes", "yes", "Yes: 10A")
+                  return normalizedVal.startsWith("yes");
+                }).length;
+
+                const percentage = Math.round((yesCount / total) * 100);
+                return (
+                  <div key={q.id}>
+                    <div className="flex justify-between text-xs font-bold mb-1.5">
+                      <span className="text-slate-300 truncate max-w-[70%]">
+                        {q.text}
+                      </span>
+                      <span
+                        className={`${percentage < 50 ? "text-red-400" : "text-emerald-400"} font-mono`}
+                      >
+                        {percentage}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                      <div
+                        className={`h-full rounded-full ${percentage < 50 ? "bg-red-500" : "bg-emerald-500"}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
+
           <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Task Weightage: 35% Manual • 35% Classes • 30% Registry</span>
-            <span className="text-emerald-400 font-semibold">Live Feed</span>
+            <span>Dynamic Analysis based on active questions</span>
+            <span className="text-emerald-400 font-semibold">Live System</span>
           </div>
         </div>
 

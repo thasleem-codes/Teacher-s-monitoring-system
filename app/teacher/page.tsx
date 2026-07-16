@@ -13,17 +13,17 @@ import {
 
 export default function TeacherPortal() {
   const [teachersList, setTeachersList] = useState<Teacher[]>([]);
-  const [questionsList, setQuestionsList] = useState<any[]>([]); // Using 'any' to accommodate new db columns
+  const [questionsList, setQuestionsList] = useState<any[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [isStarted, setIsStarted] = useState<boolean>(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] = useState<boolean>(false);
+  const [hasAlreadySubmittedToday, setHasAlreadySubmittedToday] =
+    useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Fetch both Teachers and Questions from Supabase
   useEffect(() => {
     async function loadDatabase() {
       const [teachersData, questionsData] = await Promise.all([
@@ -36,7 +36,6 @@ export default function TeacherPortal() {
     loadDatabase();
   }, []);
 
-  // Check database if selected teacher already submitted today
   const todayRawDate = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
@@ -62,7 +61,6 @@ export default function TeacherPortal() {
       t.department.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  // Real-time Day & Date
   const today = new Date();
   const daysOfWeek = [
     "Sunday",
@@ -74,14 +72,12 @@ export default function TeacherPortal() {
     "Saturday",
   ];
   const currentDayName = daysOfWeek[today.getDay()];
-
   const formattedDate = today.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  // Filter questions based on role and day
   const visibleQuestions = questionsList.filter((q) => {
     if (q.group === "class_teacher" && !currentTeacher?.isClassTeacher)
       return false;
@@ -89,7 +85,6 @@ export default function TeacherPortal() {
     return true;
   });
 
-  // FIXED: Renamed from handleChange to handleAnswer to match the JSX
   const handleAnswer = (questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
@@ -111,23 +106,20 @@ export default function TeacherPortal() {
       status: "Complete",
       score: 100,
       tasksCompleted: {
-        manualSubmitted: true,
+        manualSubmitted: answers["q1"]?.includes("Yes") || false,
         classesTaken: true,
         registryUpdated: true,
       },
       answers: answers,
-      notes: "", 
+      notes: "",
     };
 
     const result = await submitDailyLog(newSubmission);
-
     setIsSubmitting(false);
 
-    if (result.success) {
-      setSubmitted(true);
-    } else {
+    if (result.success) setSubmitted(true);
+    else
       alert("⚠️ Database error: Failed to save submission. Please try again.");
-    }
   };
 
   const handleReset = () => {
@@ -137,7 +129,23 @@ export default function TeacherPortal() {
     setAnswers({});
   };
 
-  // SCREEN 1: SUCCESS CELEBRATION
+  // Robust parser for multiple choice options fetched from DB
+  const parseCustomOptions = (options: any): string[] => {
+    if (Array.isArray(options)) return options;
+    if (typeof options === "string") {
+      try {
+        const parsed = JSON.parse(options);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return options
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+    }
+    return [];
+  };
+
   if (submitted) {
     return (
       <main className="min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-6 selection:bg-emerald-600">
@@ -162,16 +170,10 @@ export default function TeacherPortal() {
             Return to Home Page →
           </Link>
         </div>
-        <footer className="w-full text-center py-4 text-xs text-slate-500">
-          Designed by{" "}
-          <span className="text-emerald-400 font-semibold">Code Craft</span> |
-          6282811230
-        </footer>
       </main>
     );
   }
 
-  // SCREEN 2: SELECTION SCREEN
   if (!isStarted) {
     return (
       <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white overflow-hidden p-6 selection:bg-emerald-600">
@@ -185,7 +187,7 @@ export default function TeacherPortal() {
               alt="KRHS Logo"
               width={28}
               height={28}
-              style={{ width: 'auto', height: 'auto' }}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain"
             />
             <span className="font-bold text-sm tracking-tight text-white">
@@ -254,7 +256,7 @@ export default function TeacherPortal() {
                     className="fixed inset-0 z-20"
                     onClick={() => {
                       setIsDropdownOpen(false);
-                      setSearchQuery(""); 
+                      setSearchQuery("");
                     }}
                   />
                 )}
@@ -275,7 +277,6 @@ export default function TeacherPortal() {
                         />
                       </div>
                     </div>
-
                     <div className="overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
                       {filteredTeachers.length > 0 ? (
                         filteredTeachers.map((t) => (
@@ -284,7 +285,7 @@ export default function TeacherPortal() {
                             onClick={() => {
                               setSelectedTeacherId(t.id);
                               setIsDropdownOpen(false);
-                              setSearchQuery(""); 
+                              setSearchQuery("");
                             }}
                             className={`px-4 py-3.5 text-sm font-medium cursor-pointer transition-colors flex items-center justify-between ${selectedTeacherId === t.id ? "bg-emerald-600/15 text-emerald-400 border-l-2 border-emerald-500 font-semibold pl-3.5" : "text-slate-300 hover:bg-slate-800 hover:text-emerald-300"}`}
                           >
@@ -320,16 +321,10 @@ export default function TeacherPortal() {
             </div>
           </div>
         </div>
-        <footer className="w-full text-center py-4 text-xs text-slate-500 z-10">
-          Designed by{" "}
-          <span className="text-emerald-400 font-semibold">Code Craft</span> |
-          6282811230
-        </footer>
       </main>
     );
   }
 
-  // SCREEN 3: ONE ENTRY PER DAY LOCK SCREEN
   if (hasAlreadySubmittedToday) {
     return (
       <main className="min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-6 selection:bg-emerald-600">
@@ -347,16 +342,6 @@ export default function TeacherPortal() {
             has already submitted the daily end-of-day report for{" "}
             <span className="text-white font-medium">{formattedDate}</span>.
           </p>
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-left mb-8">
-            <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">
-              System Policy
-            </div>
-            <p className="text-xs text-slate-400">
-              To maintain evaluation accuracy, faculty can only record one
-              checklist submission per calendar day. If you made an error,
-              please contact your department HOD.
-            </p>
-          </div>
           <div className="flex gap-3">
             <button
               onClick={handleReset}
@@ -372,16 +357,10 @@ export default function TeacherPortal() {
             </Link>
           </div>
         </div>
-        <footer className="w-full text-center py-4 text-xs text-slate-500">
-          Designed by{" "}
-          <span className="text-emerald-400 font-semibold">Code Craft</span> |
-          6282811230
-        </footer>
       </main>
     );
   }
 
-  // SCREEN 4: THE QUESTION FORM
   return (
     <main className="min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-4 sm:p-6 selection:bg-emerald-600">
       <div className="max-w-2xl w-full mx-auto my-auto py-6">
@@ -425,7 +404,7 @@ export default function TeacherPortal() {
                   <span className="text-emerald-400 mr-2">{index + 1}.</span>
                   {q.text}
                 </label>
-                
+
                 {/* 1. SIMPLE YES / NO */}
                 {q.type === "boolean" && (
                   <div className="flex gap-3">
@@ -449,10 +428,10 @@ export default function TeacherPortal() {
                   </div>
                 )}
 
-                {/* 2. CUSTOM MULTIPLE CHOICE (Google Forms Style) */}
+                {/* 2. CUSTOM MULTIPLE CHOICE */}
                 {q.type === "multiple_choice" && (
                   <div className="flex flex-wrap gap-3">
-                    {(q.custom_options || []).map((opt: string) => (
+                    {parseCustomOptions(q.custom_options).map((opt: string) => (
                       <button
                         key={opt}
                         type="button"
@@ -472,85 +451,136 @@ export default function TeacherPortal() {
                   </div>
                 )}
 
-                {/* 3. NUMERIC SCALE (Circle Buttons up to Limit) */}
+                {/* 3. NUMERIC SCALE */}
                 {q.type === "scale" && (
                   <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: (q.scale_limit || 5) + 1 }).map(
-                      (_, i) => {
-                        const val = i.toString();
-                        const label = i === 0 ? "Nil" : val;
-                        return (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => handleAnswer(q.id, val)}
-                            className={`w-12 h-12 rounded-full font-bold text-sm transition flex flex-col items-center justify-center border ${answers[q.id] === val ? "bg-emerald-600 border-emerald-500 text-white shadow-lg scale-110" : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
+                    {Array.from({
+                      length: (parseInt(q.scale_limit) || 5) + 1,
+                    }).map((_, i) => {
+                      const val = i.toString();
+                      const label = i === 0 ? "Nil" : val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => handleAnswer(q.id, val)}
+                          className={`w-12 h-12 rounded-full font-bold text-sm transition flex flex-col items-center justify-center border ${answers[q.id] === val ? "bg-emerald-600 border-emerald-500 text-white shadow-lg scale-110" : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 4. CLASS SELECTOR WITH YES/NO CONDITIONAL */}
+                {q.type === "class_select" && (
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      {["Yes", "No"].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            if (opt === "No") handleAnswer(q.id, "No");
+                            else
+                              handleAnswer(
+                                q.id,
+                                answers[q.id]?.startsWith("Yes")
+                                  ? answers[q.id]
+                                  : "Yes: ",
+                              );
+                          }}
+                          className={`flex-1 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 border ${answers[q.id]?.startsWith(opt) ? (opt === "Yes" ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-red-500/20 border-red-500/50 text-red-400") : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${answers[q.id]?.startsWith(opt) ? "border-white" : "border-slate-600"}`}
                           >
-                            {label}
-                          </button>
-                        );
-                      },
+                            {answers[q.id]?.startsWith(opt) && (
+                              <div className="w-2 h-2 rounded-full bg-white" />
+                            )}
+                          </div>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+
+                    {answers[q.id]?.startsWith("Yes") && (
+                      <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-4 animate-[fadeInUp_0.2s_ease-out_forwards]">
+                        <p className="text-xs text-emerald-400 mb-3 uppercase font-bold tracking-wider">
+                          Select classes tested / checked:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {(() => {
+                            // Using fallback keys in case DB returns snake_case
+                            const rawClasses =
+                              currentTeacher?.assignedClasses ||
+                              currentTeacher?.assigned_classes ||
+                              "";
+                            const classArray = rawClasses
+                              .split(",")
+                              .map((c: string) => c.trim())
+                              .filter(Boolean);
+                            const displayArray =
+                              classArray.length > 0
+                                ? classArray
+                                : ["No classes assigned"];
+
+                            return displayArray.map((className: string) => {
+                              const currentSelections = answers[q.id]
+                                ? answers[q.id]
+                                    .replace(/^Yes:\s*/, "")
+                                    .split(", ")
+                                    .filter(Boolean)
+                                : [];
+                              const isSelected =
+                                currentSelections.includes(className);
+
+                              return (
+                                <button
+                                  key={className}
+                                  type="button"
+                                  onClick={() => {
+                                    if (className === "No classes assigned")
+                                      return;
+                                    let newSelections;
+                                    if (isSelected)
+                                      newSelections = currentSelections.filter(
+                                        (c: string) => c !== className,
+                                      );
+                                    else
+                                      newSelections = [
+                                        ...currentSelections,
+                                        className,
+                                      ];
+                                    handleAnswer(
+                                      q.id,
+                                      `Yes: ${newSelections.join(", ")}`,
+                                    );
+                                  }}
+                                  className={`px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border ${isSelected ? "bg-emerald-600/20 border-emerald-500 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"}`}
+                                >
+                                  <div
+                                    className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-500"}`}
+                                  >
+                                    {isSelected && (
+                                      <span className="text-slate-950 text-[10px]">
+                                        ✓
+                                      </span>
+                                    )}
+                                  </div>
+                                  {className}
+                                </button>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
 
-                {/* 4. CLASS SELECTOR (Multiple Checkboxes) */}
-                {q.type === "class_select" && (
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                    <p className="text-xs text-slate-500 mb-3 uppercase font-bold tracking-wider">
-                      Select all that apply:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {/* Safely split assigned classes, filtering out empty strings */}
-                      {(() => {
-                        const rawClasses = currentTeacher?.assignedClasses || "";
-                        const classArray = rawClasses.split(",").map((c: string) => c.trim()).filter(Boolean);
-                        const displayArray = classArray.length > 0 ? classArray : ["No classes assigned"];
-                        
-                        return displayArray.map((className: string) => {
-                          const currentSelections = answers[q.id] ? answers[q.id].split(", ") : [];
-                          const isSelected = currentSelections.includes(className);
-
-                          return (
-                            <button
-                              key={className}
-                              type="button"
-                              onClick={() => {
-                                if (className === "No classes assigned") return;
-                                let newSelections;
-                                if (isSelected) {
-                                  newSelections = currentSelections.filter(
-                                    (c: string) => c !== className,
-                                  ); // Remove
-                                } else {
-                                  newSelections = [
-                                    ...currentSelections,
-                                    className,
-                                  ]; // Add
-                                }
-                                handleAnswer(q.id, newSelections.join(", "));
-                              }}
-                              className={`px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border ${isSelected ? "bg-emerald-600/20 border-emerald-500 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"}`}
-                            >
-                              <div
-                                className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-500"}`}
-                              >
-                                {isSelected && (
-                                  <span className="text-slate-950 text-[10px]">
-                                    ✓
-                                  </span>
-                                )}
-                              </div>
-                              {className}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* 5. COMPOSITE TYPE (Yes/No + Conditional Text) */}
+                {/* 5. COMPOSITE TYPE */}
                 {q.type === "boolean_with_text" && (
                   <div className="space-y-3">
                     <div className="flex gap-3">
@@ -559,30 +589,37 @@ export default function TeacherPortal() {
                           key={opt}
                           type="button"
                           onClick={() => {
-                            if (opt === "No") {
-                              handleAnswer(q.id, "No");
-                            } else {
-                              // Initialize Yes state
-                              handleAnswer(q.id, "Yes: ");
-                            }
+                            if (opt === "No") handleAnswer(q.id, "No");
+                            else
+                              handleAnswer(
+                                q.id,
+                                answers[q.id]?.startsWith("Yes")
+                                  ? answers[q.id]
+                                  : "Yes: ",
+                              );
                           }}
                           className={`flex-1 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 border ${answers[q.id]?.startsWith(opt) ? (opt === "Yes" ? "bg-emerald-600 border-emerald-500 text-white shadow-lg" : "bg-red-500/20 border-red-500/50 text-red-400") : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800"}`}
                         >
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${answers[q.id]?.startsWith(opt) ? "border-white" : "border-slate-600"}`}>
-                            {answers[q.id]?.startsWith(opt) && <div className="w-2 h-2 rounded-full bg-white" />}
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${answers[q.id]?.startsWith(opt) ? "border-white" : "border-slate-600"}`}
+                          >
+                            {answers[q.id]?.startsWith(opt) && (
+                              <div className="w-2 h-2 rounded-full bg-white" />
+                            )}
                           </div>
                           {opt}
                         </button>
                       ))}
                     </div>
-                    
-                    {/* Conditional Text Box shows up only if they select Yes */}
+
                     {answers[q.id]?.startsWith("Yes") && (
                       <input
                         type="text"
                         placeholder="Please explain or specify..."
                         value={answers[q.id].replace(/^Yes:\s*/, "")}
-                        onChange={(e) => handleAnswer(q.id, `Yes: ${e.target.value}`)}
+                        onChange={(e) =>
+                          handleAnswer(q.id, `Yes: ${e.target.value}`)
+                        }
                         className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl p-3 text-sm text-emerald-400 outline-none placeholder:text-slate-600 animate-[fadeInUp_0.2s_ease-out_forwards]"
                         autoFocus
                       />
@@ -615,22 +652,6 @@ export default function TeacherPortal() {
           </form>
         </div>
       </div>
-      <footer className="w-full text-center py-4 text-xs text-slate-500 mt-auto">
-        Designed by{" "}
-        <span className="text-emerald-400 font-semibold">Code Craft</span> |
-        6282811230
-      </footer>
-
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `,
-        }}
-      />
     </main>
   );
 }

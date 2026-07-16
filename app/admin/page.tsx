@@ -18,6 +18,7 @@ import {
   saveQuestionToDb,
   deleteQuestionFromDb,
   updateSubmissionOverride,
+  updateTeacherInDb,
 } from "../actions";
 import AlertModal from "../components/Admin/AlertModal";
 import SettingsModal from "../components/Admin/SettingsModal";
@@ -39,6 +40,11 @@ interface AlertModalState {
   message: string;
   type: "success" | "warning" | "info";
 }
+
+type QuestionForm = Omit<Question, "id"> & {
+  day: string;
+  custom_options?: string[];
+};
 
 export default function AdminDashboard() {
   // ==========================================
@@ -79,11 +85,13 @@ export default function AdminDashboard() {
 
   // Add Faculty Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  // Update this block in your AdminDashboard
   const [newTeacherForm, setNewTeacherForm] = useState({
     name: "",
     subject: "",
     department: "UP & HS" as any,
     isClassTeacher: false,
+    assignedClasses: "", // Add this field
   });
 
   // Question Studio (CRUD) State
@@ -92,12 +100,13 @@ export default function AdminDashboard() {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
     null,
   );
-  const [questionForm, setQuestionForm] = useState<Omit<Question, "id">>({
+  const [questionForm, setQuestionForm] = useState<QuestionForm>({
     text: "",
     type: "boolean",
     group: "common",
     points: 25,
     day: "Everyday",
+    custom_options: [],
   });
 
   // Item-by-Item Breakdown State
@@ -126,6 +135,8 @@ export default function AdminDashboard() {
   );
   const [questionsList, setQuestionsList] = useState<Question[]>([]);
   const [leaderboardList, setLeaderboardList] = useState<TeacherRanking[]>([]);
+
+  const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
 
   // ==========================================
   // INITIALIZATION & DATABASE LOADING
@@ -327,35 +338,48 @@ export default function AdminDashboard() {
   // DATABASE HANDLERS
   // ==========================================
 
-  const handleAddTeacher = async (e: React.FormEvent) => {
+  const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newT: Teacher = {
-      id: `t_${Date.now()}`,
+
+    // 1. Prepare the payload
+    const teacherData = {
+      id: editingTeacherId || `t_${Date.now()}`, // Keep ID if editing, generate new if adding
       name: newTeacherForm.name,
       subject: newTeacherForm.subject,
       department: newTeacherForm.department,
       isClassTeacher: newTeacherForm.isClassTeacher,
+      assignedClasses: newTeacherForm.assignedClasses, // Ensure this matches your DB column
     };
 
-    const res = await addTeacherToDb(newT);
+    // 2. Choose whether to Update or Add
+    const res = editingTeacherId
+      ? await updateTeacherInDb(teacherData)
+      : await addTeacherToDb(teacherData);
+
+    // 3. Handle the result
     if (res.success) {
       await loadAdminDatabase();
       setIsAddModalOpen(false);
+      setEditingTeacherId(null); // Reset the editor
+
+      // Clear the form
       setNewTeacherForm({
         name: "",
         subject: "",
         department: "UP & HS",
         isClassTeacher: false,
+        assignedClasses: "",
       });
+
       triggerAlert(
-        "Faculty Added",
-        `${newT.name} has been successfully saved to the database.`,
+        editingTeacherId ? "Faculty Updated" : "Faculty Added",
+        `${teacherData.name} has been successfully ${editingTeacherId ? "updated" : "saved"} to the database.`,
         "success",
       );
     } else {
       triggerAlert(
         "Database Error",
-        "Failed to add teacher to Supabase.",
+        res.error || "Failed to save teacher.",
         "warning",
       );
     }
@@ -373,6 +397,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleBulkAddTeachers = async (parsedTeachers: any[]) => {
+    try {
+      // Loop through the array and insert each teacher
+      for (const t of parsedTeachers) {
+        const newT = {
+          id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          name: t.name,
+          subject: t.subject,
+          department: t.department,
+          isClassTeacher: t.isClassTeacher,
+          assignedClasses: t.assignedClasses,
+        };
+        await addTeacherToDb(newT);
+      }
+
+      await loadAdminDatabase();
+      setIsAddModalOpen(false);
+      triggerAlert(
+        "Bulk Import Successful",
+        `${parsedTeachers.length} faculty members have been successfully added.`,
+        "success",
+      );
+    } catch (error) {
+      triggerAlert(
+        "Import Error",
+        "Failed to bulk import teachers.",
+        "warning",
+      );
+    }
+  };
+
   const handleOpenAddQuestion = () => {
     setEditingQuestionId(null);
     setQuestionForm({
@@ -381,6 +436,7 @@ export default function AdminDashboard() {
       group: "common",
       points: 25,
       day: "Everyday",
+      custom_options: [],
     });
     setIsQuestionModalOpen(true);
   };
@@ -393,6 +449,9 @@ export default function AdminDashboard() {
       group: q.group,
       points: q.points,
       day: q.day || "Everyday",
+      custom_options: Array.isArray((q as any).custom_options)
+        ? (q as any).custom_options
+        : [],
     });
     setIsQuestionModalOpen(true);
   };
@@ -594,7 +653,8 @@ export default function AdminDashboard() {
           newTeacherForm={newTeacherForm}
           setNewTeacherForm={setNewTeacherForm}
           onClose={() => setIsAddModalOpen(false)}
-          onSubmit={handleAddTeacher}
+          onSubmit={handleSaveTeacher} // <--- Updated name here
+          onBulkSubmit={handleBulkAddTeachers}
         />
       )}
 
@@ -712,6 +772,7 @@ export default function AdminDashboard() {
               missingTeachersList={missingTeachersList}
               filteredLeaderboard={filteredLeaderboard}
               taskCompletionRates={taskCompletionRates}
+              questionsList={questionsList} // <--- ADD THIS PROP
             />
           )}
 
@@ -773,7 +834,29 @@ export default function AdminDashboard() {
             <FacultyDirectory
               selectedDept={selectedDept}
               deptTeachers={deptTeachers}
-              onAddTeacher={() => setIsAddModalOpen(true)}
+              onAddTeacher={() => {
+                setEditingTeacherId(null);
+                setNewTeacherForm({
+                  name: "",
+                  subject: "",
+                  department: selectedDept as any,
+                  isClassTeacher: false,
+                  assignedClasses: "",
+                });
+                setIsAddModalOpen(true);
+              }}
+              // FIX: Pass the function here
+              onEditTeacher={(teacher: Teacher) => {
+                setEditingTeacherId(teacher.id);
+                setNewTeacherForm({
+                  name: teacher.name,
+                  subject: teacher.subject || "",
+                  department: teacher.department,
+                  isClassTeacher: teacher.isClassTeacher,
+                  assignedClasses: (teacher as any).assignedClasses || "",
+                });
+                setIsAddModalOpen(true);
+              }}
               onDeleteTeacher={handleDeleteTeacher}
             />
           )}

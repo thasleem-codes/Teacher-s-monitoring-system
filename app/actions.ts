@@ -18,24 +18,26 @@ export async function getTeachers() {
     subject: t.subject,
     department: t.department,
     isClassTeacher: t.is_class_teacher,
+    assignedClasses: t.assigned_classes || "",
   }));
 }
 
 export async function addTeacherToDb(teacher: any) {
-  const { error } = await supabase.from("teachers").insert([
+  const { data, error } = await supabase.from("teachers").insert([
     {
       id: teacher.id,
       name: teacher.name,
       subject: teacher.subject,
       department: teacher.department,
       is_class_teacher: teacher.isClassTeacher,
-      assigned_classes: teacher.assignedClasses, // Add this line
+      assigned_classes: teacher.assignedClasses,
     },
   ]);
+
   if (error) return { success: false, error: error.message };
+
   revalidatePath("/admin");
-  revalidatePath("/teacher");
-  return { success: true };
+  return { success: true, data };
 }
 
 export async function deleteTeacherFromDb(id: string) {
@@ -174,4 +176,29 @@ export async function checkTodaySubmission(teacherId: string, rawDate: string) {
   if (error && error.code !== "PGRST116")
     console.error("Error checking submission:", error);
   return !!data;
+}
+
+// ==========================================
+// ADD THIS TO actions.ts
+// ==========================================
+export async function updateTeacherInDb(teacher: any) {
+  const { error } = await supabase
+    .from("teachers")
+    .update({
+      name: teacher.name,
+      subject: teacher.subject,
+      department: teacher.department,
+      is_class_teacher: teacher.isClassTeacher,
+      assigned_classes: teacher.assignedClasses,
+    })
+    .eq("id", teacher.id);
+
+  if (error) {
+    console.error("Error updating teacher:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/teacher");
+  return { success: true };
 }

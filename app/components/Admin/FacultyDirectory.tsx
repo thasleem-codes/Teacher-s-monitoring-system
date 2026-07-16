@@ -7,6 +7,7 @@ interface FacultyDirectoryProps {
   deptTeachers: Teacher[];
 
   onAddTeacher: () => void;
+  onEditTeacher: (teacher: Teacher) => void; // <-- ADDED THIS
   onDeleteTeacher: (teacher: Teacher) => void;
 }
 
@@ -14,6 +15,7 @@ export default function FacultyDirectory({
   selectedDept,
   deptTeachers,
   onAddTeacher,
+  onEditTeacher, // <-- ADDED THIS
   onDeleteTeacher,
 }: FacultyDirectoryProps) {
   return (
@@ -70,12 +72,21 @@ export default function FacultyDirectory({
               </div>
             </div>
 
-            <button
-              onClick={() => onDeleteTeacher(teacher)}
-              className="text-xs font-bold bg-slate-950 hover:bg-red-500/10 text-slate-400 hover:text-red-400 px-3 py-2 rounded-xl border border-slate-800 hover:border-red-500/30 transition"
-            >
-              Remove ✕
-            </button>
+            {/* NEW: Action Buttons Container */}
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button
+                onClick={() => onEditTeacher(teacher)}
+                className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl border border-slate-700 transition"
+              >
+                Edit ✏️
+              </button>
+              <button
+                onClick={() => onDeleteTeacher(teacher)}
+                className="text-xs font-bold bg-slate-950 hover:bg-red-500/10 text-slate-400 hover:text-red-400 px-3 py-2 rounded-xl border border-slate-800 hover:border-red-500/30 transition"
+              >
+                Remove ✕
+              </button>
+            </div>
           </div>
         ))}
       </div>
