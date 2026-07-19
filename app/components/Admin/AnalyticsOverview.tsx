@@ -77,8 +77,8 @@ export default function AnalyticsOverview({
             {filteredLeaderboard[0]?.name || "No Data"}
           </div>
           <p className="text-xs text-amber-300/80 mt-2 font-semibold">
-            Score: {filteredLeaderboard[0]?.monthlyScore || 0} / 100 • 14 Day
-            Streak
+            Score: {filteredLeaderboard[0]?.monthlyScore || 0} / 100 •{" "}
+            {filteredLeaderboard[0]?.streak || 0} Day Streak
           </p>
         </div>
       </div>
@@ -99,7 +99,6 @@ export default function AnalyticsOverview({
                 const total = filteredSubmissions.length || 1;
 
                 const yesCount = filteredSubmissions.filter((s) => {
-
                   const val = s.answers[q.id];
                   if (!val) return false;
 
