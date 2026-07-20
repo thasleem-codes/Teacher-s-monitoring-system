@@ -41,8 +41,28 @@ export async function addTeacherToDb(teacher: any) {
 }
 
 export async function deleteTeacherFromDb(id: string) {
-  const { error } = await supabase.from("teachers").delete().eq("id", id);
-  if (error) return { success: false, error: error.message };
+  // 1. First, delete all daily log submissions associated with this teacher
+  const { error: submissionsError } = await supabase
+    .from("submissions")
+    .delete()
+    .eq("teacher_id", id);
+
+  if (submissionsError) {
+    console.error("Error deleting submissions for teacher:", submissionsError);
+    return { success: false, error: "Failed to delete teacher's response history." };
+  }
+
+  // 2. Then, delete the teacher from the directory
+  const { error: teacherError } = await supabase
+    .from("teachers")
+    .delete()
+    .eq("id", id);
+
+  if (teacherError) {
+    console.error("Error deleting teacher:", teacherError);
+    return { success: false, error: teacherError.message };
+  }
+
   revalidatePath("/admin");
   revalidatePath("/teacher");
   return { success: true };
