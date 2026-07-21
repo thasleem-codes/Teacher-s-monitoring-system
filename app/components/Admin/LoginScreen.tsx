@@ -26,10 +26,12 @@ export default function LoginScreen({
   onSubmit,
 }: LoginScreenProps) {
   return (
-    <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-6 selection:bg-emerald-600">
+    // FIX 1: Added overflow-x-hidden and adjusted padding for mobile (p-4 sm:p-6)
+    <main className="relative min-h-dvh flex flex-col justify-between bg-slate-950 text-white p-4 sm:p-6 selection:bg-emerald-600 overflow-x-hidden">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
 
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/15 to-teal-500/15 blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
+      {/* FIX 2: Made the background glow scale down on mobile screens */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] bg-gradient-to-tr from-emerald-600/15 to-teal-500/15 blur-[100px] sm:blur-[140px] rounded-full pointer-events-none -z-10 animate-pulse duration-[6000ms]" />
 
       <header className="w-full max-w-md mx-auto flex items-center justify-between py-4 border-b border-slate-900 z-10">
         <div className="flex items-center gap-2.5">
@@ -56,10 +58,9 @@ export default function LoginScreen({
       </header>
 
       <div className="max-w-md w-full my-auto mx-auto relative z-10">
-        <div className="w-24 h-1 bg-gradient-to-r from-emerald-500 to-teal-400 mx-auto rounded-t-full shadow-lg shadow-emerald-500/30 mb-[-1px] relative z-20" />
+        <div className="w-24 h-1 bg-linear-to-r from-emerald-500 to-teal-400 mx-auto rounded-t-full shadow-lg shadow-emerald-500/30 mb-[-1px] relative z-20" />
 
-        <div className="bg-slate-900/90 p-8 sm:p-10 rounded-3xl shadow-2xl border border-slate-800/80 backdrop-blur-xl">
-
+        <div className="bg-slate-900/90 p-6 sm:p-10 rounded-3xl shadow-2xl border border-slate-800/80 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
               🔒 Security Gateway
@@ -79,7 +80,6 @@ export default function LoginScreen({
           </p>
 
           <form onSubmit={onSubmit} className="space-y-4">
-
             <div>
               <label className="block text-xs font-bold uppercase text-slate-300 mb-1">
                 Username
@@ -93,7 +93,7 @@ export default function LoginScreen({
                   setLoginError(false);
                 }}
                 placeholder="Username..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500"
                 required
               />
             </div>
@@ -113,7 +113,7 @@ export default function LoginScreen({
                   setLoginError(false);
                 }}
                 placeholder="Password..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-emerald-500 font-mono"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 font-mono"
                 required
               />
             </div>
@@ -126,13 +126,11 @@ export default function LoginScreen({
 
             <button
               type="submit"
-              className="w-full font-bold py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white shadow-xl shadow-emerald-600/20 transition-all text-sm"
+              className="w-full font-bold py-3.5 px-6 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white shadow-xl shadow-emerald-600/20 transition-all text-sm mt-2"
             >
               Unlock Command Center →
             </button>
-
           </form>
-
         </div>
       </div>
 
